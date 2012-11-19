@@ -1,7 +1,6 @@
 #include <isam.hpp>
 
 Node::Node(int idx) {
-	cout << "create node " << idx << endl;
 	memset(this, '\0', sizeof(Node));
 	this->idx = idx;
 };
@@ -12,17 +11,53 @@ Node::~Node() {
 
 void Node::insert(int idx) {
 	if (idx < this->idx) {
-		cout << "parent idx: " << this->idx << " insert left" << endl;
-		this->left = new Node(idx);
+		if (this->left == NULL) {
+			this->left = new Node(idx);
+		}
+		else {
+			this->left->insert(idx);
+		}
 	}
 	else if (idx > this->idx) {
-		cout << "parent idx: " << this->idx << " insert right" << endl;
-		this->right = new Node(idx);
+		if (this->right == NULL) {
+			this->right = new Node(idx);
+		}
+		else {
+			this->right->insert(idx);
+		}
 	}
 	else {
 		// TODO
 	}
 };
+
+void Node::remove(int idx) {
+	if (idx < this->idx) {
+		cout << "parent idx: " << this->idx << " remove left" << endl;
+		this->left->remove(idx);
+	}
+	else if (idx > this->idx) {
+		cout << "parent idx: " << this->idx << " remove right" << endl;
+		this->right->remove(idx);
+	}
+	else {
+		delete this;
+	}
+};
+
+void Node::show(int depth) {
+	if (this->left != NULL) {
+		this->left->show(depth + 1);
+	}
+	for (int i = 0; i < depth; i++) {
+		cout << "  ";
+	}
+	cout << this->idx << endl;
+	if (this->right != NULL) {
+		this->right->show(depth + 1);
+	}
+};
+
 
 int Node::getIdx() {
 	return this->idx;
@@ -48,8 +83,12 @@ void Node::deleteChild() {
 int main(int argc, char const* argv[])
 {
 	Node* node = new Node(1);
+	node->insert(5);
 	node->insert(2);
+	node->insert(4);
 	node->insert(0);
 	node->deleteChild();
+	node->show(0);
+	node->remove(4);
 	return 0;
 }

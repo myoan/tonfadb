@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 project(tonfa)
-set(CMAKE_C_FLAGS   "-Wall -O0 -g3")
+set(CMAKE_CXX_FLAGS   "-Wall -O0 -g3")
 
 set(SRC_DIR
 	src/isam.cpp

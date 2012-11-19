@@ -7,6 +7,8 @@ public:
 	Node(int idx);
 	~Node();
 	void insert(int idx);
+	void remove(int idx);
+	void show(int depth);
 	int getIdx();
 	Node* getLeft();
 	Node* getRight();
