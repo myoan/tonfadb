@@ -4,7 +4,7 @@
 #ifndef TNF_UTIL_H_
 #define TNF_UTIL_H_
 
-#ifdef _DEBUG
+#ifdef DEBUG
 
 #define debug(fmt, ...) reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
 #define fixme(fmt, ...) reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
@@ -18,7 +18,7 @@
 #define todo(fmt, ...)
 #define err(fmt, ...)
 
-#endif /* _DEBUG */
+#endif /* DEBUG */
 
 /* ---------------------------------------------------------------------- */
 /* [array] */

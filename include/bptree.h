@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define _DEBUG 1
-
 #include <util.h>
 
 #ifdef __cplusplus

@@ -90,6 +90,9 @@ void push_size_tArray(TNF_size_tArray* a, size_t value) {
 }
 
 size_t pop_size_tArray(TNF_size_tArray* a) {
+	if (a->idx < 1) {
+		return -1;
+	}
 	size_t ret = *a->buf + (a->idx - 1);
 	a->idx--;
 	return ret;
