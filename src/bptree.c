@@ -72,10 +72,10 @@ TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
 	bw_node->size = BIN_CENTERING_KEY;
 	parent->data[fw_idx] = (void*)fw_node;
 	parent->data[fw_idx + 1] = (void*)bw_node;
-	memcpy(fw_node->bucket, node->bucket, sizeof(bucket_id) * BIN_CENTERING_KEY);
-	memcpy(bw_node->bucket, node->bucket + BIN_CENTERING_KEY + 1, sizeof(bucket_id) * BIN_CENTERING_KEY);
-	memcpy(fw_node->data, node->data, sizeof(void*) * BIN_CENTERING_KEY);
-	memcpy(bw_node->data, node->data + BIN_CENTERING_KEY, sizeof(void*) * BIN_CENTERING_KEY);
+	memcpy(fw_node->bucket, node->bucket, BUCKET_CENTERING_KEY_BYTE);
+	memcpy(bw_node->bucket, node->bucket + BIN_CENTERING_KEY + 1, BUCKET_CENTERING_KEY_BYTE);
+	memcpy(fw_node->data, node->data, DATA_CENTERING_KEY_BYTE);
+	memcpy(bw_node->data, node->data + BIN_CENTERING_KEY, DATA_CENTERING_KEY_BYTE);
 	updateRoot(node, parent);
 	return bw_node;
 }

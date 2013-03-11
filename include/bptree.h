@@ -18,6 +18,8 @@ extern "C" {
 #define BIN_BUCKET_MAXSIZE 4
 #define BIN_BUCKET_OVERSIZE (BIN_BUCKET_MAXSIZE + 1)
 #define BIN_CENTERING_KEY (BIN_BUCKET_MAXSIZE / 2)
+#define DATA_CENTERING_KEY_BYTE (BIN_CENTERING_KEY * sizeof(void*))
+#define BUCKET_CENTERING_KEY_BYTE (BIN_CENTERING_KEY * sizeof(bucket_id))
 
 #define ROOT        0 // 0000
 #define BRANCH      1 // 0001
