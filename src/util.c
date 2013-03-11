@@ -69,7 +69,7 @@ TNF_size_tArray* create_size_tArray() {
 void expand_size_tArray(TNF_size_tArray* a) {
 	size_t maxsize = a->maxsize * 2;
 	size_t* tmp;
-	debug("expand array[%p]: %lu -> %lu\n", a, a->maxsize, maxsize);
+	debug("expand array[%p]: %lu -> %lu", a, a->maxsize, maxsize);
 	if ((tmp = (size_t*)realloc(a->buf, maxsize)) == NULL) {
 		fixme("EXCEPTION! could not allocate\n");
 	}
@@ -102,12 +102,14 @@ size_t pop_size_tArray(TNF_size_tArray* a) {
 /* [allocate] */
 
 void* _TNF_malloc(size_t size) {
+	debug("allocate: %lu", size);
 	void* ret = (void*)malloc(size);
 	memset(ret, '\0', size);
 	return ret;
 }
 
 void _TNF_free(void* p) {
+	debug("free: %p", p);
 	free(p);
 }
 

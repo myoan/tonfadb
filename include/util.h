@@ -7,9 +7,9 @@
 #ifdef DEBUG
 
 #define debug(fmt, ...) reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
-#define fixme(fmt, ...) reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
-#define todo(fmt, ...)  reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
-#define err(fmt, ...)   reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define fixme(fmt, ...) reportFIXME(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define todo(fmt, ...)  reportTODO(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define err(fmt, ...)   reportERR(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
 
 #else
 
@@ -20,6 +20,8 @@
 
 #endif /* DEBUG */
 
+#define TNF_malloc(s) _TNF_malloc(s)
+#define TNF_free(p)   _TNF_free(p)
 /* ---------------------------------------------------------------------- */
 /* [array] */
 

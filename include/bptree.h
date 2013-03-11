@@ -14,32 +14,33 @@ extern "C" {
 
 /* ---------------------------------------------------------------------- */
 
-#define BIN_NODE_NUM 5
+#define bucket_id size_t
+#define BIN_BUCKET_MAXSIZE 4
+#define BIN_BUCKET_OVERSIZE (BIN_BUCKET_MAXSIZE + 1)
+#define BIN_CENTERING_KEY (BIN_BUCKET_MAXSIZE / 2)
 
-typedef struct _TNF_BinNode TNF_BinNode;
-typedef struct _TNF_BinBranch TNF_BinBranch;
-typedef struct _TNF_BinLeaf TNF_BinLeaf;
+#define ROOT        0 // 0000
+#define BRANCH      1 // 0001
+#define LEAF        2 // 0010
+#define BRANCH_LEAF 4 // 0100
+#define NODE_TYPE   7 // 0111
 
+typedef struct _TNF_BinNode   TNF_BinNode;
+typedef struct _TNF_Record    TNF_Record;
+
+// TODO: padding
 struct _TNF_BinNode {
 	size_t type;
-	size_t depth;
-	size_t bucket[BIN_NODE_NUM - 1];
-	union {
-		TNF_BinBranch* branch;
-		TNF_BinLeaf*   leaf;
-	};
+	size_t size;
+	TNF_BinNode* parent;
+	//size_t depth;
+	bucket_id bucket[BIN_BUCKET_OVERSIZE]; // enable bucket[:-1] + extra space for split node
+	void** data;
 } _TNF_BinNode;
 
-struct _TNF_BinBranch {
-	size_t bucket[BIN_NODE_NUM - 1];
-	TNF_BinLeaf* leaf;
-} _TNF_BinBranch;
-
-struct _TNF_BinLeaf {
-	size_t bucket[BIN_NODE_NUM - 1];
-	size_t data[BIN_NODE_NUM];
-} _TNF_BinLeaf;
-
+struct _TNF_Record {
+	size_t dummy;
+} _TNF_Record;
 /* ---------------------------------------------------------------------- */
 
 #endif /* BPTREE_H_ */
