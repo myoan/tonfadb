@@ -21,11 +21,11 @@ extern "C" {
 #define DATA_CENTERING_KEY_BYTE (BIN_CENTERING_KEY * sizeof(void*))
 #define BUCKET_CENTERING_KEY_BYTE (BIN_CENTERING_KEY * sizeof(bucket_id))
 
-#define ROOT        0 // 0000
-#define BRANCH      1 // 0001
-#define LEAF        2 // 0010
-#define BRANCH_LEAF 4 // 0100
-#define NODE_TYPE   7 // 0111
+#define ROOT        1  // 00001
+#define BRANCH      2  // 00010
+#define LEAF        4  // 00100
+#define BRANCH_LEAF 8  // 01000
+#define NODE_TYPE   15 // 11111
 
 typedef struct _TNF_BinNode   TNF_BinNode;
 typedef struct _TNF_Record    TNF_Record;

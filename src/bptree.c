@@ -21,22 +21,43 @@ TNF_BinNode* create_newRoot() { // depth is increment
 	return node;
 }
 
-void printNode(TNF_BinNode* node) {
-	size_t i;
-	fprintf(stderr, "bucket: [");
-	for (i = 0; i < node->size; i++) {
-		fprintf(stderr, " %lu,", node->bucket[i]);
-	}
-	fprintf(stderr, "]\n");
+#define INDENT_TO(__indent) {              \
+	int __i;                               \
+	for (__i = 0; __i < __indent; __i++) { \
+		fprintf(stderr, "\t");             \
+	}                                      \
+}
 
-	if (node->type & LEAF || node->type & BRANCH_LEAF) {
-		fprintf(stderr, "record: [");
-		for (i = 0; i < node->size + 1; i++) {
-			if (node->data[i] != NULL) {
-				fprintf(stderr, " %lu,", ((TNF_Record*)node->data[i])->dummy);
-			}
+#define isRecord(node) (node->type & LEAF)
+#define isNode(node)   (node->type & (BRANCH | ROOT))
+
+void printNode(TNF_BinNode* node) {
+	static int indent = 0;
+	if (node->data[0] == NULL) return;
+	if (isRecord(node)) {
+		INDENT_TO(indent);
+		fprintf(stderr, "r(%d): [%lu]\n", 0, ((TNF_Record*)node->data[0])->dummy);
+	}
+	else if (isNode(node)) {
+		indent++;
+		printNode(node->data[0]);
+		indent--;
+	}
+	size_t i, data_i = 0;
+	for (i = 0; i < node->size; i++) {
+		data_i++;
+		INDENT_TO(indent);
+		fprintf(stderr, "b(%lu): [%lu]\n", i, node->bucket[i]);
+		if (node->data[data_i] == NULL) continue;
+		if (isRecord(node)) {
+			INDENT_TO(indent);
+			fprintf(stderr, "r(%lu): [%lu]\n", data_i, ((TNF_Record*)node->data[data_i])->dummy);
 		}
-		fprintf(stderr, "]\n");
+		else if (isNode(node)) {
+			indent++;
+			printNode(node->data[data_i]);
+			indent--;
+		}
 	}
 }
 
@@ -47,9 +68,12 @@ TNF_BinNode* create_child(TNF_BinNode* node, bucket_id id) {
 }
 
 void updateRoot(TNF_BinNode* from, TNF_BinNode* to) {
-	TNF_free(from->data);
-	memcpy(from, to, sizeof(TNF_BinNode));
-	TNF_free(to);
+	//TNF_free(from->data);
+	//memcpy(to->data, from->data, sizeof(void*) * from->size);
+	memcpy(to, from, sizeof(TNF_BinNode));
+	to->data = from->data;
+	//from = to;
+	//TNF_free(from);
 }
 
 TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
@@ -58,6 +82,9 @@ TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
 		parent = create_newRoot();
 		node->parent = parent;
 		node->type = LEAF;
+	}
+	else {
+		parent = node->parent;
 	}
 	if (parent->size == BIN_BUCKET_MAXSIZE) {
 		bucket_id center_key = parent->bucket[BIN_CENTERING_KEY];
@@ -76,7 +103,7 @@ TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
 	memcpy(bw_node->bucket, node->bucket + BIN_CENTERING_KEY + 1, BUCKET_CENTERING_KEY_BYTE);
 	memcpy(fw_node->data, node->data, DATA_CENTERING_KEY_BYTE);
 	memcpy(bw_node->data, node->data + BIN_CENTERING_KEY, DATA_CENTERING_KEY_BYTE);
-	updateRoot(node, parent);
+	updateRoot(parent, node);
 	return bw_node;
 }
 
@@ -103,28 +130,75 @@ TNF_Record* create_record(size_t data) {
 	return ret;
 }
 
-TNF_BinNode* addData(TNF_BinNode* node, bucket_id id, TNF_Record* record) {
+int getIndex(TNF_BinNode* node, bucket_id id) {
 	bucket_id* buckets = node->bucket;
-	int idx = insertBucket(node, id);
-	if (idx >= 0) {
+	int i;
+	for (i = 0; i < BIN_BUCKET_MAXSIZE; i++) {
+		if (buckets[i] > id) {
+			return i;
+		}
+	}
+	return i;
+}
+
+int insertBucket_withIdx(TNF_BinNode* node, int idx, bucket_id id) {
+	memcpy(node->bucket + idx+1, node->bucket + idx, sizeof(bucket_id) * (node->size - idx));
+	node->bucket[idx] = id;
+	node->size++;
+	if (node->size > BIN_BUCKET_MAXSIZE) {
+		return -1;
+	}
+	return idx;
+}
+
+TNF_BinNode* getRoot(TNF_BinNode* node) {
+	if (node->parent != NULL) {
+		return getRoot(node->parent);
+	}
+	return node;
+}
+
+TNF_BinNode* addData(TNF_BinNode* node, bucket_id id, TNF_Record* record) {
+	fprintf(stderr, "add (%lu, %lu)\n", id, record->dummy);
+	bucket_id* buckets = node->bucket;
+	TNF_BinNode* ret;
+	if (node->size == BIN_BUCKET_MAXSIZE) {
+		goto filledBucket;
+	}
+	int idx = getIndex(node, id);
+	if (isNode(node)) {
+		node = addData((TNF_BinNode*)node->data[idx], id, record);
+		ret = getRoot(node);
+	}
+	else if (isRecord(node)) {
+		insertBucket_withIdx(node, idx, id);
 		memcpy(node->data + idx+1, node->data + idx, sizeof(void*) * (node->size - idx));
 		node->data[idx] = record;
-		return node;
+		//TNF_Record* rcd = node->data[idx];
+		//Record_open(rcd, rcd->filename, rcd->fd, COLUMN_SIZE);
+		//Record_write(rcd, "You say good bye. I say hello.");
+		//Record_close(rcd);
+		ret = node;
 	}
+	return ret;
 	// bucket is filled!
+filledBucket:;
+	idx = getIndex(node, id);
+	insertBucket_withIdx(node, idx, id);
 	bucket_id center_key = buckets[BIN_CENTERING_KEY];
-	//fprintf(stderr, "center key: %lu\n", center_key);
 	TNF_BinNode* cur = splitNode(node, center_key);
 	cur->data[BIN_CENTERING_KEY] = record;
-	return node;
+	TNF_BinNode* root = getRoot(node);
+	return root;
+	//return node;
 }
 
 int main(int argc, char const* argv[])
 {
-	TNF_BinNode* root = create_newRoot();
+	TNF_BinNode* root = create_node();
 	TNF_Record* rcd = create_record(0);
+	//TNF_Record* rcd = TNF_CreateFile();
 	root = addData(root, 10, rcd);
-	rcd = create_record(1);
 	root = addData(root, 12, rcd);
 	rcd = create_record(2);
 	root = addData(root, 8, rcd);
@@ -132,6 +206,16 @@ int main(int argc, char const* argv[])
 	root = addData(root, 90, rcd);
 	rcd = create_record(4);
 	root = addData(root, 20, rcd);
-	printNode((TNF_BinNode*)root->data[1]);
+	rcd = create_record(5);
+	root = addData(root, 100, rcd);
+	rcd = create_record(6);
+	root = addData(root, 101, rcd);
+	rcd = create_record(7);
+	root = addData(root, 102, rcd);
+	rcd = create_record(8);
+	root = addData(root, 103, rcd);
+	fprintf(stderr, "root(%p)\n", root);
+	printNode(root);
 	return 0;
 }
+

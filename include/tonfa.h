@@ -22,13 +22,13 @@ extern "C" {
 
 /* ----------------------------------------------------------------------------- */
 
-typedef struct _TNF_filenode TNF_filenode;
+typedef struct _TNF_Record TNF_Record;
 
 typedef struct _TNF_libs {
-	TNF_filenode* (*init)(TNF_filenode* node, char* name, int fd, size_t size);
-	void (*write)(TNF_filenode* node, char* data, size_t size);
-	char* (*read)(TNF_filenode* node, size_t size);
-	void (*close)(TNF_filenode* node);
+	TNF_Record* (*init)(TNF_Record* node, char* name, int fd, size_t size);
+	void (*write)(TNF_Record* node, char* data, size_t size);
+	char* (*read)(TNF_Record* node, size_t size);
+	void (*close)(TNF_Record* node);
 } TNF_libs;
 
 typedef struct _TNF_objHeader {
@@ -36,7 +36,7 @@ typedef struct _TNF_objHeader {
 	TNF_libs* libs;
 } TNF_objHeader;
 
-struct _TNF_filenode {
+struct _TNF_Record {
 	TNF_objHeader* h;
 	int fd;
 	char* name;
@@ -62,10 +62,10 @@ size_t digit(int i);
 /* ----------------------------------------------------------------------------- */
 /* filenode methods */
 
-TNF_filenode* filenode_init(TNF_filenode* node, char* name, int fd, size_t table_size);
-void filenode_write(TNF_filenode* node, char* data, size_t table_idx);
-char* filenode_read(TNF_filenode* node, size_t size);
-void filenode_close(TNF_filenode* node);
+TNF_Record* Record_init(TNF_Record* node, char* name, int fd, size_t table_size);
+void Record_write(TNF_Record* node, char* data, size_t table_idx);
+char* Record_read(TNF_Record* node, size_t size);
+void Record_close(TNF_Record* node);
 
 /* ----------------------------------------------------------------------------- */
 
