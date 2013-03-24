@@ -27,21 +27,29 @@ extern "C" {
 #define BRANCH_LEAF 8  // 01000
 #define NODE_TYPE   15 // 11111
 
-typedef struct _TNF_BinNode   TNF_BinNode;
-typedef struct _TNF_Record    TNF_Record;
+typedef struct _TNF_Node         TNF_Node;
+typedef struct _TNF_Record       TNF_Record;
+typedef struct _TNF_RecordHeader TNF_RecordHeader;
 
 // TODO: padding
-struct _TNF_BinNode {
+struct _TNF_Node {
 	size_t type;
 	size_t size;
-	TNF_BinNode* parent;
-	//size_t depth;
+	TNF_Node* parent;
 	bucket_id bucket[BIN_BUCKET_OVERSIZE]; // enable bucket[:-1] + extra space for split node
 	void** data;
-} _TNF_BinNode;
+} _TNF_Node;
+
+struct _TNF_RecordHeader {
+	bucket_id base;
+	size_t size;
+	size_t cursor;
+} _TNF_RecordHeader;
 
 struct _TNF_Record {
-	size_t dummy;
+	bucket_id pad;
+	bucket_id id;
+	size_t data_idx;
 } _TNF_Record;
 /* ---------------------------------------------------------------------- */
 

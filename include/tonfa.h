@@ -5,14 +5,28 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <util.h>
+#include <btree.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* ----------------------------------------------------------------------------- */
+
 #ifndef __TONFA_H_
 #define __TONFA_H_
 
+typedef struct _TNF_Record TNF_Record;
+
+typedef struct _TNF_Index           TNF_Index;
+typedef struct _TNF_RecordAddrMap   TNF_RecordAddrMap;
+typedef struct _TNF_RecordMapHeader TNF_RecordMapHeader;
+
+/* ----------------------------------------------------------------------------- */
+/* TonfaDB: TNF_Record struct */
+
+#define bucket_id size_t
 #define _KB 1024
 #define _MB (_KB * _KB)
 #define COLUMN_SIZE 32
@@ -20,25 +34,21 @@ extern "C" {
 #define FILE_SUFFIX ".tnf"
 #define FILE_SUFFIX_LEN 4 /* .tnf */
 
-/* ----------------------------------------------------------------------------- */
-
-typedef struct _TNF_Record TNF_Record;
-
-typedef struct _TNF_libs {
-	TNF_Record* (*init)(TNF_Record* node, char* name, int fd, size_t size);
+typedef struct _TNF_RecordLibs {
+	TNF_Record* (*init)(TNF_Record* node, char* name, FILE* fp, size_t size);
 	void (*write)(TNF_Record* node, char* data, size_t size);
 	char* (*read)(TNF_Record* node, size_t size);
 	void (*close)(TNF_Record* node);
-} TNF_libs;
+} TNF_RecordLibs;
 
-typedef struct _TNF_objHeader {
+typedef struct _TNF_RecordHeader {
 	int id;
-	TNF_libs* libs;
-} TNF_objHeader;
+	TNF_RecordLibs* libs;
+} TNF_RecordHeader;
 
 struct _TNF_Record {
-	TNF_objHeader* h;
-	int fd;
+	TNF_RecordHeader* h;
+	FILE* fp;
 	char* name;
 	size_t head_idx;
 	size_t tail_idx;
@@ -47,13 +57,40 @@ struct _TNF_Record {
 	size_t size;
 };
 
-#define TNF_Malloc(size) _TNF_malloc(size)
-#define TNF_Free(p) _TNF_free(p)
+
+/* ----------------------------------------------------------------------------- */
+/* TonfaDB: TNF_Node struct */
+
+struct _TNF_RecordMapHeader {
+	bucket_id base;
+	size_t size;
+	size_t cursor;
+} _TNF_RecordMapHeader;
+
+struct _TNF_RecordAddrMap {
+	bucket_id pad;
+	bucket_id id;
+	size_t addr;
+} _TNF_RecordAddrMap;
+
+/* ----------------------------------------------------------------------------- */
+/* TonfaDB: TNF_Index struct */
+
+struct _TNF_Index {
+	char* dbname;
+	char* tblname;
+	size_t cursor;
+	TNF_Node* tree;
+	TNF_Record* record;
+};
 
 /* ============================================================================= */
 /* prototype */
 /* ----------------------------------------------------------------------------- */
 /* utils */
+
+//#define TNF_malloc(size) _TNF_malloc(size)
+//#define TNF_free(p) _TNF_free(p)
 
 void* _TNF_malloc(size_t size);
 void _TNF_free(void* p);
@@ -62,17 +99,16 @@ size_t digit(int i);
 /* ----------------------------------------------------------------------------- */
 /* filenode methods */
 
-TNF_Record* Record_init(TNF_Record* node, char* name, int fd, size_t table_size);
-void Record_write(TNF_Record* node, char* data, size_t table_idx);
+TNF_Record* TNF_CreateFile();
+TNF_Record* Record_init(TNF_Record* node, char* name, FILE* fp, size_t table_size);
+size_t Record_write(TNF_Record* node, char* data, size_t table_idx);
 char* Record_read(TNF_Record* node, size_t size);
 void Record_close(TNF_Record* node);
 
-/* ----------------------------------------------------------------------------- */
+#endif /* __TONFA_H_ */
 
-//TNF_libs filenode_libs = {filenode_init, filenode_write, filenode_read, filenode_close};
+/* ----------------------------------------------------------------------------- */
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* __TONFA_H_ */

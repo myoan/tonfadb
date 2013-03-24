@@ -20,9 +20,11 @@ SET(CMAKE_C_FLAGS_DEBUG        "${CMAKE_CXX_FLAGS} -O0 -g3")
 SET(CMAKE_C_FLAGS_COMPRESSED   "${CMAKE_CXX_FLAGS} -Os -g0")
 
 set(SRC_DIR
-	src/bptree.c
+	#src/bptree.c
+	src/btree.c
 	src/util.c
 	src/file.c
+	src/tonfa.c
 )
 
 set(INCLUDE_DIR

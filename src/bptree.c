@@ -1,10 +1,12 @@
 #include <bptree.h>
 
-void printNode(TNF_BinNode* node);
-int insertBucket(TNF_BinNode* node, bucket_id id);
+void printNode(TNF_Node* node);
+int insertBucket(TNF_Node* node, bucket_id id);
 
-TNF_BinNode* create_node() {
-	TNF_BinNode* node = (TNF_BinNode*)TNF_malloc(sizeof(TNF_BinNode));
+#define RECORD_MAX_SIZE 4
+
+TNF_Node* Tree_createNode() {
+	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = LEAF;
 	node->size = 0;
 	node->data = (void*)TNF_malloc(sizeof(void*) * (BIN_BUCKET_MAXSIZE + 1));
@@ -12,8 +14,8 @@ TNF_BinNode* create_node() {
 	return node;
 }
 
-TNF_BinNode* create_newRoot() { // depth is increment
-	TNF_BinNode* node = (TNF_BinNode*)TNF_malloc(sizeof(TNF_BinNode));
+TNF_Node* create_newRoot() { // depth is increment
+	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = ROOT;
 	node->size = 0;
 	node->data = (void**)TNF_malloc(sizeof(void*) * (BIN_BUCKET_MAXSIZE + 1));
@@ -28,15 +30,27 @@ TNF_BinNode* create_newRoot() { // depth is increment
 	}                                      \
 }
 
-#define isRecord(node) (node->type & LEAF)
+#define isLeaf(node) (node->type & LEAF)
 #define isNode(node)   (node->type & (BRANCH | ROOT))
+#define _record(list, idx) ((TNF_Record*)(list + idx))
+#define record(list, idx) (_record(list, idx + 1))
+#define recordHeader(rcd) ((TNF_RecordHeader*)_record(rcd, 0))
 
-void printNode(TNF_BinNode* node) {
+void printRecord(TNF_Record* list, int indent) {
+	TNF_RecordHeader* h = (TNF_RecordHeader*)list;
+	size_t size = h->cursor, i;
+	for (i = 0; i < size; i++) {
+		TNF_Record* rcd = record(list, i);
+		INDENT_TO(indent+1);
+		fprintf(stderr, "(%lu, %lu)\n", rcd->id, rcd->data_idx);
+	}
+}
+
+void printNode(TNF_Node* node) {
 	static int indent = 0;
 	if (node->data[0] == NULL) return;
-	if (isRecord(node)) {
-		INDENT_TO(indent);
-		fprintf(stderr, "r(%d): [%lu]\n", 0, ((TNF_Record*)node->data[0])->dummy);
+	if (isLeaf(node)) {
+		printRecord((TNF_Record*)node->data[0], indent+1);
 	}
 	else if (isNode(node)) {
 		indent++;
@@ -47,11 +61,10 @@ void printNode(TNF_BinNode* node) {
 	for (i = 0; i < node->size; i++) {
 		data_i++;
 		INDENT_TO(indent);
-		fprintf(stderr, "b(%lu): [%lu]\n", i, node->bucket[i]);
+		fprintf(stderr, "bucket: [%lu]\n", node->bucket[i]);
 		if (node->data[data_i] == NULL) continue;
-		if (isRecord(node)) {
-			INDENT_TO(indent);
-			fprintf(stderr, "r(%lu): [%lu]\n", data_i, ((TNF_Record*)node->data[data_i])->dummy);
+		if (isLeaf(node)) {
+			printRecord((TNF_Record*)node->data[data_i], indent+1);
 		}
 		else if (isNode(node)) {
 			indent++;
@@ -61,23 +74,19 @@ void printNode(TNF_BinNode* node) {
 	}
 }
 
-TNF_BinNode* create_child(TNF_BinNode* node, bucket_id id) {
-	TNF_BinNode* parent = create_node();
+TNF_Node* create_child(TNF_Node* node, bucket_id id) {
+	TNF_Node* parent = Tree_createNode();
 	node->parent = parent;
 	return node;
 }
 
-void updateRoot(TNF_BinNode* from, TNF_BinNode* to) {
-	//TNF_free(from->data);
-	//memcpy(to->data, from->data, sizeof(void*) * from->size);
-	memcpy(to, from, sizeof(TNF_BinNode));
+void updateRoot(TNF_Node* from, TNF_Node* to) {
+	memcpy(to, from, sizeof(TNF_Node));
 	to->data = from->data;
-	//from = to;
-	//TNF_free(from);
 }
 
-TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
-	TNF_BinNode* parent;
+TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
+	TNF_Node* parent;
 	if (node->parent == NULL) {
 		parent = create_newRoot();
 		node->parent = parent;
@@ -91,8 +100,8 @@ TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
 		splitNode(parent, center_key);
 	}
 	int fw_idx = insertBucket(parent, id);
-	TNF_BinNode* fw_node = create_node();
-	TNF_BinNode* bw_node = create_node();
+	TNF_Node* fw_node = Tree_createNode();
+	TNF_Node* bw_node = Tree_createNode();
 	fw_node->parent = parent;
 	fw_node->size = BIN_CENTERING_KEY;
 	bw_node->parent = parent;
@@ -107,7 +116,7 @@ TNF_BinNode* splitNode(TNF_BinNode* node, bucket_id id) {
 	return bw_node;
 }
 
-int insertBucket(TNF_BinNode* node, bucket_id id) {
+int insertBucket(TNF_Node* node, bucket_id id) {
 	bucket_id* buckets = node->bucket;
 	int i;
 	for (i = 0; i < BIN_BUCKET_MAXSIZE; i++) {
@@ -124,13 +133,14 @@ int insertBucket(TNF_BinNode* node, bucket_id id) {
 	return -1;
 }
 
-TNF_Record* create_record(size_t data) {
+TNF_Record* create_record(size_t id, size_t addr) {
 	TNF_Record* ret = (TNF_Record*)malloc(sizeof(TNF_Record));
-	ret->dummy = data;
+	ret->id = id;
+	ret->data_idx = addr;
 	return ret;
 }
 
-int getIndex(TNF_BinNode* node, bucket_id id) {
+int getIndex(TNF_Node* node, bucket_id id) {
 	bucket_id* buckets = node->bucket;
 	int i;
 	for (i = 0; i < BIN_BUCKET_MAXSIZE; i++) {
@@ -141,7 +151,7 @@ int getIndex(TNF_BinNode* node, bucket_id id) {
 	return i;
 }
 
-int insertBucket_withIdx(TNF_BinNode* node, int idx, bucket_id id) {
+int insertBucket_withIdx(TNF_Node* node, int idx, bucket_id id) {
 	memcpy(node->bucket + idx+1, node->bucket + idx, sizeof(bucket_id) * (node->size - idx));
 	node->bucket[idx] = id;
 	node->size++;
@@ -151,71 +161,95 @@ int insertBucket_withIdx(TNF_BinNode* node, int idx, bucket_id id) {
 	return idx;
 }
 
-TNF_BinNode* getRoot(TNF_BinNode* node) {
+TNF_Node* getRoot(TNF_Node* node) {
 	if (node->parent != NULL) {
 		return getRoot(node->parent);
 	}
 	return node;
 }
 
-TNF_BinNode* addData(TNF_BinNode* node, bucket_id id, TNF_Record* record) {
-	fprintf(stderr, "add (%lu, %lu)\n", id, record->dummy);
+TNF_Record* create_recordList() {
+	TNF_Record* list = (TNF_Record*)TNF_malloc(sizeof(TNF_Record) * (RECORD_MAX_SIZE + 1));
+	TNF_RecordHeader* h = (TNF_RecordHeader*)list;
+	h->size = RECORD_MAX_SIZE;
+	h->cursor = 0;
+	return list;
+}
+
+void write_record(TNF_Record* list, size_t idx, size_t data_addr) {
+	size_t base = recordHeader(list)->base;
+	TNF_Record* rcd = record(list, idx - base);
+	rcd->id = idx;
+	rcd->data_idx = data_addr;
+	TNF_RecordHeader* h = recordHeader(list);
+	h->cursor++;
+}
+
+TNF_Record* getRecord(TNF_Node* node, bucket_id id) {
+	size_t i;
+	for (i = 0; i < node->size; i++) {
+		//fprintf(stderr, "base(%lu): %lu, idx: %lu\n", i+1, node->bucket[i], id);
+		if (node->bucket[i] > id) {
+			return (TNF_Record*)node->data[i];
+		}
+	}
+	return NULL;
+}
+
+TNF_Record* addRecordList(TNF_Node* node, bucket_id id) {
+	TNF_Record* list = create_recordList();
+	node->data[node->size] = (void*)list;
+	node->bucket[node->size] = id + RECORD_MAX_SIZE;
+	node->size++;
+	recordHeader(list)->base = id;
+	return list;
+}
+
+TNF_Node* Tree_addNode(TNF_Node* node, bucket_id id, TNF_Record* record) {
 	bucket_id* buckets = node->bucket;
-	TNF_BinNode* ret;
-	if (node->size == BIN_BUCKET_MAXSIZE) {
-		goto filledBucket;
+	TNF_Node* ret;
+	if (node->size > BIN_BUCKET_MAXSIZE) {
+		if (node->bucket[node->size-1] == id) {
+			goto filledBucket;
+		}
 	}
 	int idx = getIndex(node, id);
 	if (isNode(node)) {
-		node = addData((TNF_BinNode*)node->data[idx], id, record);
+		node = Tree_addNode((TNF_Node*)node->data[idx], id, record);
 		ret = getRoot(node);
 	}
-	else if (isRecord(node)) {
-		insertBucket_withIdx(node, idx, id);
-		memcpy(node->data + idx+1, node->data + idx, sizeof(void*) * (node->size - idx));
-		node->data[idx] = record;
-		//TNF_Record* rcd = node->data[idx];
-		//Record_open(rcd, rcd->filename, rcd->fd, COLUMN_SIZE);
-		//Record_write(rcd, "You say good bye. I say hello.");
-		//Record_close(rcd);
+	else if (isLeaf(node)) {
+		TNF_Record* rcd = getRecord(node, id);
+		if (rcd == NULL || recordHeader(rcd)->cursor == RECORD_MAX_SIZE) {
+			rcd = addRecordList(node, id);
+		}
+		write_record(rcd, record->id, record->data_idx);
 		ret = node;
 	}
 	return ret;
 	// bucket is filled!
 filledBucket:;
+	asm("int3");
 	idx = getIndex(node, id);
 	insertBucket_withIdx(node, idx, id);
 	bucket_id center_key = buckets[BIN_CENTERING_KEY];
-	TNF_BinNode* cur = splitNode(node, center_key);
+	TNF_Node* cur = splitNode(node, center_key);
 	cur->data[BIN_CENTERING_KEY] = record;
-	TNF_BinNode* root = getRoot(node);
+	TNF_Node* root = getRoot(node);
 	return root;
-	//return node;
 }
 
 int main(int argc, char const* argv[])
 {
-	TNF_BinNode* root = create_node();
-	TNF_Record* rcd = create_record(0);
-	//TNF_Record* rcd = TNF_CreateFile();
-	root = addData(root, 10, rcd);
-	root = addData(root, 12, rcd);
-	rcd = create_record(2);
-	root = addData(root, 8, rcd);
-	rcd = create_record(3);
-	root = addData(root, 90, rcd);
-	rcd = create_record(4);
-	root = addData(root, 20, rcd);
-	rcd = create_record(5);
-	root = addData(root, 100, rcd);
-	rcd = create_record(6);
-	root = addData(root, 101, rcd);
-	rcd = create_record(7);
-	root = addData(root, 102, rcd);
-	rcd = create_record(8);
-	root = addData(root, 103, rcd);
-	fprintf(stderr, "root(%p)\n", root);
+	TNF_Node* root = Tree_createNode();
+	TNF_Record* rcd;
+	size_t i;
+	for (i = 0; i < 20; i++) {
+		rcd = create_record(i, i);
+		root = Tree_addNode(root, i, rcd);
+	}
 	printNode(root);
+	//Tree_searchNode(10);
 	return 0;
 }
 

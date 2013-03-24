@@ -1,5 +1,13 @@
-//#include <tonfa.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <assert.h>
+
 
 #ifndef TNF_UTIL_H_
 #define TNF_UTIL_H_
