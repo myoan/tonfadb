@@ -22,9 +22,11 @@ SET(CMAKE_C_FLAGS_COMPRESSED   "${CMAKE_CXX_FLAGS} -Os -g0")
 set(SRC_DIR
 	#src/bptree.c
 	src/btree.c
-	src/util.c
 	src/file.c
+	src/parse.c
+	src/readline.c
 	src/tonfa.c
+	src/util.c
 )
 
 set(INCLUDE_DIR

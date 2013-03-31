@@ -15,7 +15,7 @@ extern "C" {
 /* ----------------------------------------------------------------------------- */
 
 #ifndef __TONFA_H_
-#define __TONFA_H_
+#define __TONFA_H_ 1
 
 typedef struct _TNF_Record TNF_Record;
 
@@ -84,6 +84,31 @@ struct _TNF_Index {
 	TNF_Record* record;
 };
 
+/* ----------------------------------------------------------------------------- */
+/* TonfaDB: TNF_Command libs */
+
+typedef enum {
+	INST_NULL = 0,
+	INST_UPDATE,
+	INST_DELETE,
+	INST_SELECT,
+	INST_INSERT,
+} TNF_Inst_t;
+
+void TNF_CmdUpdate(TNF_Index* index, char** line);
+void TNF_CmdDelete(TNF_Index* index, char** line);
+void TNF_CmdSelect(TNF_Index* index, char** line);
+void TNF_CmdInsert(TNF_Index* index, char** line);
+
+void (*TNF_CmdLibs[])(TNF_Index*, char**);
+//void (*TNF_CmdLibs[])(char**) = {
+//	NULL, // INST_NULL
+//	TNF_CmdUpdate, // INST_UPDATE
+//	TNF_CmdDelete, // INST_DELETE
+//	TNF_CmdSelect, // INST_SELECT
+//	TNF_CmdInsert  // INST_INSERT
+//};
+
 /* ============================================================================= */
 /* prototype */
 /* ----------------------------------------------------------------------------- */
@@ -104,6 +129,9 @@ TNF_Record* Record_init(TNF_Record* node, char* name, FILE* fp, size_t table_siz
 size_t Record_write(TNF_Record* node, char* data, size_t table_idx);
 char* Record_read(TNF_Record* node, size_t size);
 void Record_close(TNF_Record* node);
+void readFile(TNF_Index* index, char* str);
+void parse(TNF_Index* index, char** line);
+char* getToken(char** line);
 
 #endif /* __TONFA_H_ */
 
