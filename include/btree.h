@@ -10,6 +10,7 @@ extern "C" {
 #define __BTREE_H_
 
 typedef struct _TNF_Node            TNF_Node;
+typedef struct _TNF_NodeData        TNF_NodeData;
 typedef struct _TNF_LeafNode        TNF_LeafNode;
 typedef struct _TNF_NodeResult      TNF_NodeResult;
 
@@ -25,12 +26,13 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 
 #define isLeaf(node) (node->type & LEAF)
 #define isNode(node)   (node->type & (BRANCH | ROOT))
-#define child(node, idx) ((TNF_Node*)(node->child + idx))
-#define leaf(node, idx) ((TNF_LeafNode*)(node->leaf + idx))
-#define leafdata(leaf, idx) (leaf->data + ((idx) * SIZEOF_VOIDPTR_BYTE))
+#define child(node, idx) ((TNF_Node*)(node->child + (idx)))
+#define leaf(node, idx) (((TNF_LeafNode*)node->leaf) + (idx))
+#define leafdata(leaf, idx) (leaf->data + ((idx) * SIZEOF_VOIDPTR))
 
 #define _BYTE 8
-#define SIZEOF_VOIDPTR (sizeof(void*))
+#define SIZEOF_VOIDPTR 20
+//#define SIZEOF_VOIDPTR (sizeof(void*))
 #define SIZEOF_VOIDPTR_BYTE (SIZEOF_VOIDPTR * _BYTE)
 
 #define bucket_id size_t
@@ -38,8 +40,8 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 #define BINTREE_LEAF_DATASIZE 4
 #define BINTREE_BUCKET_OVERSIZE (BINTREE_BUCKET_MAXSIZE + 1)
 #define BINTREE_CENTERING_KEY (BINTREE_BUCKET_MAXSIZE / 2)
-#define DATA_CENTERING_KEY_BYTE (BINTREE_CENTERING_KEY * sizeof(void*))
-#define BUCKET_CENTERING_KEY_BYTE (BINTREE_CENTERING_KEY * sizeof(bucket_id))
+#define DATA_CENTERING_KEY (BINTREE_CENTERING_KEY * sizeof(void*))
+#define BUCKET_CENTERING_KEY (BINTREE_CENTERING_KEY * sizeof(bucket_id))
 
 #define ROOT        1  // 00001
 #define BRANCH      2  // 00010
@@ -59,13 +61,21 @@ struct _TNF_Node {
 	};
 } _TNF_Node;
 
+struct _TNF_NodeData {
+	size_t cursor;
+	_TNF_LeafNode* next;
+	TNF_LeafNode* parent;
+	void* data;
+} _TNF_NodeData;
+
 struct _TNF_LeafNode {
 	bucket_id base;
+	_TNF_LeafNode* next;
 	size_t size;
 	size_t cursor;
 	TNF_Node* parent;
 	bucket_id bucket[BINTREE_BUCKET_MAXSIZE];
-	void* data;
+	TNF_NodeData** data;
 } _TNF_LeafNode;
 
 struct _TNF_NodeResult {

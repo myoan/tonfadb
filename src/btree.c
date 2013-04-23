@@ -5,7 +5,7 @@ TNF_Node* Tree_create() {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = LEAF;
 	node->size = 0;
-	node->leaf = (void*)TNF_malloc(SIZEOF_VOIDPTR_BYTE * (BINTREE_BUCKET_MAXSIZE + 1));
+	node->leaf = (void*)TNF_malloc(SIZEOF_VOIDPTR * (BINTREE_BUCKET_MAXSIZE + 1));
 	memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
 	return node;
 }
@@ -51,55 +51,60 @@ static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 	leaf->size = BINTREE_LEAF_DATASIZE;
 	leaf->cursor = 0;
 	leaf->parent = node;
-	leaf->data = (void*)TNF_malloc(SIZEOF_VOIDPTR_BYTE * BINTREE_LEAF_DATASIZE);
-	fprintf(stderr, "data range: %p - %p\n", leaf->data, leaf->data + SIZEOF_VOIDPTR_BYTE * BINTREE_LEAF_DATASIZE);
+	leaf->data = (TNF_NodeData**)TNF_malloc(TNF_NodeData * BINTREE_LEAF_DATASIZE);
+	fprintf(stderr, "data range: %p - %p\n", leaf->data, leaf->data + SIZEOF_VOIDPTR * BINTREE_LEAF_DATASIZE);
 	node->bucket[node->size] = id + BINTREE_LEAF_DATASIZE;
 	node->size++;
 	return leaf;
 }
 
 TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data) {
+	//assert(node != NULL);
 	TNF_Node* ret;
 	if (node->size > BINTREE_BUCKET_MAXSIZE) {
 		if (node->bucket[node->size-1] == id) {
 			goto filledBucket;
 		}
 	}
+	fprintf(stderr, "node: %p\n", node);
 	int idx = getIndex(node, id);
 	if (isNode(node)) {
 		node = Tree_add(child(node, idx), id, data);
 		ret = getRoot(node);
 	}
 	else if (isLeaf(node)) {
+		fprintf(stderr, "id: %lu\n", id);
 		TNF_LeafNode* leaf = getLeaf(node, id);
+		fprintf(stderr, "leaf: %p\n", leaf);
 		if (leaf == NULL || leaf->cursor == BINTREE_LEAF_DATASIZE) {
 			leaf = createLeaf(node, id);
 		}
-		todo("random bucket");
-		void* ptr = leafdata(leaf, id - leaf->base);
+		//todo("random bucket");
+		//void* ptr = leafdata(leaf, id - leaf->base);
 		//fprintf(stderr, "leafdata: %p\n", ptr);
-		memcpy(ptr, &data, SIZEOF_VOIDPTR);
-		leaf->bucket[id - leaf->base] = id;
-		leaf->cursor++;
+		//memcpy(ptr, &data, SIZEOF_VOIDPTR);
+		//leaf->bucket[id - leaf->base] = id;
+		//leaf->cursor++;
 		//fprintf(stderr, "leaf: %p\n", getLeaf(node, id));
-		memcpy(getLeaf(node, id), leaf, sizeof(TNF_LeafNode));
-		ret = node;
+		//memcpy(getLeaf(node, id), leaf, sizeof(TNF_LeafNode));
+		//ret = node;
 	}
 	return ret;
 	// bucket is filled!
 filledBucket:;
 	todo("expand bintree node");
 	asm("int3");
-	//bucket_id* buckets = node->bucket;
-	//asm("int3");
-	//idx = getIndex(node, id);
-	//insertBucket_withIdx(node, idx, id);
-	//bucket_id center_key = buckets[BINTREE_CENTERING_KEY];
-	//TNF_Node* cur = splitNode(node, center_key);
-	//cur->data[BINTREE_CENTERING_KEY] = record;
-	//TNF_Node* root = getRoot(node);
-	//return root;
-	return node;
+
+	bucket_id* buckets = node->bucket;
+	idx = getIndex(node, id);
+	insertBucket_withIdx(node, idx, id);
+	bucket_id center_key = buckets[BINTREE_CENTERING_KEY];
+	TNF_Node* cur = splitNode(node, center_key);
+	cur->data[BINTREE_CENTERING_KEY] = record;
+	TNF_Node* root = getRoot(node);
+	return root;
+
+	//return node;
 }
 
 /* ----------------------------------------------------------------------------- */
@@ -183,7 +188,6 @@ void Tree_print(TNF_Node* node, void (*printLeaf)(TNF_LeafNode*, int)) {
 
 /* ============================================================================= */
 
-/*
 int int_cmp(void* l, void* r) {
 	int* base = (int*)l;
 	int* id = (int*)r;
@@ -197,7 +201,8 @@ void printTest(TNF_LeafNode* leaf, int indent) {
 	for (i = 0; i < leaf->cursor; i++) {
 		INDENT_TO(indent);
 		str = (char**)leafdata(leaf, i);
-		fprintf(stderr, "[%lu]: %s(%p)\n", leaf->bucket[i], *str, str);
+		fprintf(stderr, "[%lu]: (%p)\n", leaf->bucket[i], *str);
+		//fprintf(stderr, "[%lu]: %s(%p)\n", leaf->bucket[i], *str, str);
 	}
 }
 
@@ -209,19 +214,18 @@ int main(int argc, char const* argv[])
 	TNF_Node* root = Tree_create();
 	//Tree_start("dbname", "tblname"); // always working at another process
 	size_t i;
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 21; i++) {
 		Tree_add(root, id++, (void*)addr);
 	}
 	Tree_print(root, printTest);
 	//size_t addr = Tree_get(root, bucket_id);
-	int th = 10;
-	TNF_NodeResult* list = Tree_search(root, (void*)&th, int_cmp);
-	for (i = 0; i < list->size; i++) {
-		char** str = (char**)(list->data + (i * SIZEOF_VOIDPTR));
-		fprintf(stderr, "ret: %s\n", *str);
-	}
+	//int th = 10;
+	//TNF_NodeResult* list = Tree_search(root, (void*)&th, int_cmp);
+	//for (i = 0; i < list->size; i++) {
+	//	char** str = (char**)(list->data + (i * SIZEOF_VOIDPTR));
+	//	fprintf(stderr, "ret: %s\n", *str);
+	//}
 	//Tree_save(root);
 	Tree_exit(root);
 	return 0;
 }
-*/

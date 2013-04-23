@@ -21,13 +21,13 @@ int all_true(void* l, void* r) {
 	return 1;
 }
 
-int int_cmp(void* l, void* r) {
-	int* base = (int*)l;
-	int* id = (int*)r;
-	fprintf(stderr, "r(%d) == l(%d)\n", *base, *id);
-	fprintf(stderr, "result: %s\n", (*base < *id) ? "true" : "false");
-	return (*base <= *id) ? 1 : 0;
-}
+//int int_cmp(void* l, void* r) {
+//	int* base = (int*)l;
+//	int* id = (int*)r;
+//	fprintf(stderr, "r(%d) == l(%d)\n", *base, *id);
+//	fprintf(stderr, "result: %s\n", (*base < *id) ? "true" : "false");
+//	return (*base <= *id) ? 1 : 0;
+//}
 
 bucket_id TNF_insert(TNF_Index* index, bucket_id id, char* data) {
 	// 1. write Record, get Record addr
@@ -100,6 +100,7 @@ void (*TNF_CmdLibs[])(TNF_Index*, char**) = {
 	TNF_CmdInsert  // INST_INSERT
 };
 
+/*
 int main(int argc, char** argv)
 {
 	TNF_Index* index = (TNF_Index*)TNF_malloc(sizeof(TNF_Index));
@@ -122,7 +123,6 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-/*
 int main(int argc, char const* argv[])
 {
 	TNF_Index* index = (TNF_Index*)TNF_malloc(sizeof(TNF_Index));
