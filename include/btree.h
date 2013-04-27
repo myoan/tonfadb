@@ -19,14 +19,14 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 #define INDENT_TO(__indent) {              \
 	int __i;                               \
 	for (__i = 0; __i < __indent; __i++) { \
-		fprintf(stderr, "\t");             \
+		fprintf(stderr, "    ");             \
 	}                                      \
 }
 
 #define isLeaf(node) (node->type & LEAF)
 #define isNode(node)   (node->type & (BRANCH | ROOT))
-#define child(node, idx) ((TNF_Node*)(node->child + idx))
-#define leaf(node, idx) ((TNF_LeafNode*)(node->leaf + idx))
+#define child(node, idx) ((TNF_Node*)(node->child[idx]))
+#define leaf(node, idx) ((TNF_LeafNode*)(node->leaf[idx]))
 #define leafdata(leaf, idx) (leaf->data + ((idx) * SIZEOF_VOIDPTR_BYTE))
 
 #define _BYTE 8
@@ -54,17 +54,16 @@ struct _TNF_Node {
 	TNF_Node* parent;
 	bucket_id bucket[BINTREE_BUCKET_OVERSIZE]; // enable bucket[:-1] + extra space for split node
 	union {
-		TNF_Node* child;
-		TNF_LeafNode* leaf;
+		TNF_Node** child;
+		TNF_LeafNode** leaf;
 	};
 } _TNF_Node;
 
 struct _TNF_LeafNode {
-	bucket_id base;
+	size_t type;
 	size_t size;
-	size_t cursor;
 	TNF_Node* parent;
-	bucket_id bucket[BINTREE_BUCKET_MAXSIZE];
+	bucket_id bucket;
 	void* data;
 } _TNF_LeafNode;
 
@@ -78,7 +77,7 @@ struct _TNF_NodeResult {
 /* ----------------------------------------------------------------------------- */
 /* prototype */
 
-void Tree_print(TNF_Node* node, void(*printLeaf)(TNF_LeafNode*, int));
+void Tree_print(TNF_Node* node, void(*printLeaf)(TNF_LeafNode*));
 TNF_Node* Tree_create();
 void Tree_start(char* dbname, char* tblname);
 TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data);
