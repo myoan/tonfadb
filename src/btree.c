@@ -5,8 +5,8 @@ TNF_Node* Tree_create() {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = BRANCH;
 	node->size = 0;
-	node->leaf = (void*)TNF_malloc(sizeof(TNF_LeafNode*) * (BINTREE_BUCKET_MAXSIZE + 1));
-	fprintf(stderr, "leaf size: %lu\n", sizeof(TNF_LeafNode*) * (BINTREE_BUCKET_MAXSIZE + 1));
+	node->leaf = (void*)TNF_malloc(sizeof(TNF_LeafNode*) * BINTREE_BUCKET_OVERSIZE);
+	fprintf(stderr, "leaf size: %lu\n", sizeof(TNF_LeafNode*) * BINTREE_BUCKET_OVERSIZE);
 	memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
 	return node;
 }
@@ -59,6 +59,7 @@ static int insertIndex(TNF_Node* node, bucket_id id) {
 			memcpy(node->child + (i+1), node->child + i, sizeof(TNF_Node*) * (BINTREE_BUCKET_MAXSIZE - i));
 			memset(node->child + i, '\0', sizeof(TNF_Node*));
 			printIndex(buckets);
+			node->size++;
 			return i;
 		}
 	}
@@ -90,7 +91,7 @@ static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 	leaf->type = LEAF;
 	leaf->size = 0;
 	leaf->parent = node;
-	node->size++;
+	//node->size++;
 	return leaf;
 }
 
@@ -98,9 +99,7 @@ static TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
 	todo("expand bintree node");
 	asm("int3");
 //	bucket_id* buckets = node->bucket;
-//	asm("int3");
-//	idx = getIndex(node, id);
-//	insertBucket_withIdx(node, idx, id);
+//	int idx = insertIndex(node, id);
 //	bucket_id center_key = buckets[BINTREE_CENTERING_KEY];
 //	TNF_Node* cur = splitNode(node, center_key);
 //	cur->data[BINTREE_CENTERING_KEY] = record;
@@ -111,10 +110,10 @@ static TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
 
 TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data) {
 	TNF_Node* ret;
+	int idx = insertIndex(node, id);
 	if (node->size >= BINTREE_BUCKET_MAXSIZE) {
 		splitNode(node, id);
 	}
-	int idx = insertIndex(node, id);
 	TNF_Node* ch_node = child(node, idx);
 	if (ch_node == NULL) {
 		ch_node = (TNF_Node*)createLeaf(node, id);
@@ -272,22 +271,14 @@ int main(int argc, char const* argv[])
 	TNF_Node* root = Tree_create();
 	//Tree_start("dbname", "tblname"); // always working at another process
 	size_t i;
-	char* addr = (char*)malloc(sizeof(char) * (strlen("hello") + 1));
-	//char* addr1 = (char*)malloc(sizeof(char) * (strlen("hello") + 1));
-	//strncpy(addr1, "hello1", strlen("hello1"));
-	//Tree_add(root, 1, (void*)addr1);
-	//char* addr4 = (char*)malloc(sizeof(char) * (strlen("hello") + 1));
-	//strncpy(addr4, "hello12", strlen("hello12"));
-	//Tree_add(root, 12, (void*)addr4);
-	//char* addr2 = (char*)malloc(sizeof(char) * (strlen("hello") + 1));
-	//strncpy(addr2, "hello10", strlen("hello10"));
-	//Tree_add(root, 10, (void*)addr2);
-	//char* addr3 = (char*)malloc(sizeof(char) * (strlen("hello") + 1));
-	//strncpy(addr3, "hello19", strlen("hello19"));
-	//Tree_add(root, 19, (void*)addr3);
+	char* addr;
+	size_t data;
 	srand(time(NULL));
 	for (i = 0; i < 4; i++) {
-		Tree_add(root, rand() % 100, (void*)addr);
+		data = rand() % 100;
+		addr = (char*)malloc(sizeof(char) * 16);
+		sprintf(addr, "hello%lu[%lu]", data, i);
+		Tree_add(root, data, (void*)addr);
 	}
 	Tree_print(root, printTest);
 	////size_t addr = Tree_get(root, bucket_id);
