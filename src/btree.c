@@ -10,18 +10,20 @@ static TNF_Node* createRoot() {
 	node->child = (void*)TNF_malloc(sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	fprintf(stderr, "leaf size: %lu\n", sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
+	memset(node->child, '\0', sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	return node;
 }
 
 static TNF_Node* createBranch(TNF_Node* parent) {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
-	node->type = ROOT;
+	node->type = BRANCH;
 	node->size = 0;
 	node->parent = parent;
 	node->isOverLeaf = false;
 	node->child = (void*)TNF_malloc(sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	fprintf(stderr, "leaf size: %lu\n", sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
+	memset(node->child, '\0', sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	return node;
 }
 
@@ -120,6 +122,16 @@ static TNF_Node** insertParentBucket(TNF_Node* node, bucket_id id, bool isOverLe
 		if (ch_node == NULL) {
 			node->child[idx + i] = (TNF_Node*)createBranch(node);
 			node->child[idx + i]->isOverLeaf = isOverLeaf;
+		}
+		else {
+			// initialize.
+			// caller側のnodeも初期化されてしまう
+			//node->child[idx+i]->type = BRANCH;
+			//node->child[idx+i]->size = 0;
+			//node->child[idx+i]->parent = node;
+			//node->child[idx+i]->isOverLeaf = isOverLeaf;
+			//memset(node->child[idx+i]->leaf, '\0', sizeof(TNF_LeafNode*) * BINTREE_BUCKET_OVERSIZE);
+			//memset(node->child[idx+i]->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
 		}
 	}
 	return node->child + idx;
