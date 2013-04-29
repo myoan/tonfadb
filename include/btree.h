@@ -1,4 +1,5 @@
 #include <util.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,11 +20,12 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 #define INDENT_TO(__indent) {              \
 	int __i;                               \
 	for (__i = 0; __i < __indent; __i++) { \
-		fprintf(stderr, "    ");             \
+		fprintf(stderr, "  ");             \
 	}                                      \
 }
 
 #define isLeaf(node) (node->type & LEAF)
+#define isOverLeaf(node) node->isOverLeaf
 #define isNode(node)   (node->type & (BRANCH | ROOT))
 #define child(node, idx) ((TNF_Node*)(node->child[idx]))
 #define leaf(node, idx) ((TNF_LeafNode*)(node->leaf[idx]))
@@ -37,7 +39,7 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 #define BINTREE_BUCKET_MAXSIZE 4
 #define BINTREE_LEAF_DATASIZE 4
 #define BINTREE_BUCKET_OVERSIZE (BINTREE_BUCKET_MAXSIZE + 1)
-#define BINTREE_CENTERING_KEY (BINTREE_BUCKET_MAXSIZE / 2)
+#define BINTREE_CENTERING_KEY (BINTREE_BUCKET_MAXSIZE / 2 + 1)
 #define DATA_CENTERING_KEY_BYTE (BINTREE_CENTERING_KEY * sizeof(void*))
 #define BUCKET_CENTERING_KEY_BYTE (BINTREE_CENTERING_KEY * sizeof(bucket_id))
 
@@ -51,6 +53,8 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 struct _TNF_Node {
 	size_t type;
 	size_t size;
+	size_t bsize;
+	bool isOverLeaf;
 	TNF_Node* parent;
 	bucket_id bucket[BINTREE_BUCKET_OVERSIZE]; // enable bucket[:-1] + extra space for split node
 	union {
@@ -61,9 +65,9 @@ struct _TNF_Node {
 
 struct _TNF_LeafNode {
 	size_t type;
-	size_t size;
+	size_t size; // <-- ?
 	TNF_Node* parent;
-	bucket_id bucket;
+	//bucket_id bucket;
 	void* data;
 } _TNF_LeafNode;
 
