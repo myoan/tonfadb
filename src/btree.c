@@ -119,20 +119,8 @@ static TNF_Node** insertParentBucket(TNF_Node* node, bucket_id id, bool isOverLe
 	int i = 0;
 	for (i = 0; i < 2; i++) {
 		ch_node = child(node, idx + i);
-		if (ch_node == NULL) {
-			node->child[idx + i] = (TNF_Node*)createBranch(node);
-			node->child[idx + i]->isOverLeaf = isOverLeaf;
-		}
-		else {
-			// initialize.
-			// caller側のnodeも初期化されてしまう
-			//node->child[idx+i]->type = BRANCH;
-			//node->child[idx+i]->size = 0;
-			//node->child[idx+i]->parent = node;
-			//node->child[idx+i]->isOverLeaf = isOverLeaf;
-			//memset(node->child[idx+i]->leaf, '\0', sizeof(TNF_LeafNode*) * BINTREE_BUCKET_OVERSIZE);
-			//memset(node->child[idx+i]->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
-		}
+		node->child[idx + i] = (TNF_Node*)createBranch(node);
+		node->child[idx + i]->isOverLeaf = isOverLeaf;
 	}
 	return node->child + idx;
 }
