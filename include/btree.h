@@ -24,18 +24,16 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 	}                                      \
 }
 
+typedef size_t bucket_id;
+
 #define isLeaf(node) (node->type & LEAF)
 #define isOverLeaf(node) node->isOverLeaf
 #define isNode(node)   (node->type & (BRANCH | ROOT))
-#define child(node, idx) ((TNF_Node*)(node->child[idx]))
-#define leaf(node, idx) ((TNF_LeafNode*)(node->leaf[idx]))
-#define leafdata(leaf, idx) (leaf->data + ((idx) * SIZEOF_VOIDPTR_BYTE))
 
 #define _BYTE 8
 #define SIZEOF_VOIDPTR (sizeof(void*))
 #define SIZEOF_VOIDPTR_BYTE (SIZEOF_VOIDPTR * _BYTE)
 
-#define bucket_id size_t
 #define BINTREE_BUCKET_MAXSIZE 4
 #define BINTREE_LEAF_DATASIZE 4
 #define BINTREE_BUCKET_OVERSIZE (BINTREE_BUCKET_MAXSIZE + 1)
@@ -49,25 +47,65 @@ typedef struct _TNF_NodeResult      TNF_NodeResult;
 #define BRANCH_LEAF 8  // 01000
 #define NODE_TYPE   15 // 11111
 
+#define BUCKET_LENGTH 5
+#define LEAF_LENGTH   5
+#define NODE_LENGTH   (BUCKET_LENGTH + LEAF_LENGTH)
+
+#define Bidx(idx)  (2 * (idx) + 1)
+#define Lidx(idx)  (2 * (idx))
+#define B(node, idx)  node->data[Bidx(idx)]
+#define L(node, idx)  node->data[Lidx(idx)]
+#define leafdata(leaf, idx) (leaf->data + (Lidx(idx) * SIZEOF_VOIDPTR_BYTE))
+
+#define setB(node, idx, id) {\
+		B(node,idx)  = (void*)id;	\
+		node->bsize++;				\
+	}
+
+#define setL(node, idx, data) {\
+		L(node,idx)  = (void*)data;	\
+		node->lsize++;				\
+	}
+
+#define foreach(a, e) \
+		size_t i; \
+		for (i = 0; i < 8, e = a[i]; i++) \
+
+#define FOREACH_BUCKET(node, bucket) \
+		size_t _bi; \
+		for (_bi = 0; _bi < node->bsize, bucket = B(node, _bi); _bi++)\
+
+#define FOREACH_NODE(node, ch) \
+		size_t _ni; \
+		for (_ni = 0; _ni < node->lsize, ch = (TNF_Node*)L(node, _ni); _ni++) \
+
+#define FOREACH_LEAF(node, leaf) \
+		size_t _li; \
+		for (_li = 0; _li < node->lsize, node = (TNF_LeafNode*)L(node, _li); _li++) \
+
+#define LSHIFT_BUCKET(node, n) { \
+		memcpy(node->data + n, node->data, SIZEOF_VOIDPTR * n); \
+	}
+
+typedef struct MultiArray {
+	size_t bsize;
+	size_t lsize;
+	void* data[NODE_LENGTH];
+} MultiArray;
+
 // TODO: padding
 struct _TNF_Node {
 	size_t type;
-	size_t size;
 	size_t bsize;
+	size_t lsize;
 	bool isOverLeaf;
 	TNF_Node* parent;
-	bucket_id bucket[BINTREE_BUCKET_OVERSIZE]; // enable bucket[:-1] + extra space for split node
-	union {
-		TNF_Node** child;
-		TNF_LeafNode** leaf;
-	};
+	void* data[NODE_LENGTH];
 } _TNF_Node;
 
 struct _TNF_LeafNode {
 	size_t type;
-	size_t size; // <-- ?
 	TNF_Node* parent;
-	//bucket_id bucket;
 	void* data;
 } _TNF_LeafNode;
 

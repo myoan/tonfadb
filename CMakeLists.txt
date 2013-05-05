@@ -8,7 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-	add_definitions(-DDEBUG)
+	add_definitions(-DTNF_DEBUG)
 endif()
 
 SET(CFLAGS "-Wsign-compare -Wformat")

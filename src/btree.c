@@ -4,7 +4,7 @@
 static TNF_Node* createRoot() {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = ROOT;
-	node->size = 0;
+	node->lsize = 0;
 	node->bsize = 0;
 	node->parent = NULL;
 	node->isOverLeaf = false;
@@ -18,7 +18,7 @@ static TNF_Node* createRoot() {
 static TNF_Node* createBranch(TNF_Node* parent) {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = BRANCH;
-	node->size = 0;
+	node->lsize = 0;
 	node->bsize = 0;
 	node->parent = parent;
 	node->isOverLeaf = false;
@@ -32,7 +32,7 @@ static TNF_Node* createBranch(TNF_Node* parent) {
 static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 	TNF_LeafNode* leaf = (TNF_LeafNode*)TNF_malloc(sizeof(TNF_LeafNode));
 	leaf->type = LEAF;
-	leaf->size = 0;
+	leaf->lsize = 0;
 	leaf->parent = node;
 	return leaf;
 }
@@ -55,17 +55,17 @@ void Tree_start(char* dbname, char* tblname) {
 		b = _tmp;		\
 	}
 
-static void sortIndex(bucket_id* bucket) {
+static void sortIndex(TNF_Node* node) {
 	//bubble sort
 	//[TODO] implement better sort algorithm.
 	size_t i, j, max_i = 0;
 	for (i = BINTREE_BUCKET_MAXSIZE; i > 0; i--) {
 		for (j = 0; j < i; j++) {
-			if (bucket[max_i] < bucket[j]) {
+			if (B(node, max_i) < B(node, j)) {
 				max_i = j;
 			}
 		}
-		SWAP(size_t, bucket[i-1], bucket[max_i]);
+		SWAP(size_t, B(node, i-1), B(node, max_i));
 		max_i = 0;
 	}
 }
@@ -82,14 +82,25 @@ void printBucket(bucket_id* p) {
 static int insertBucket(TNF_Node* node, bucket_id id) {
 	bucket_id* buckets = node->bucket;
 	int i = 0;
-	sortIndex(buckets);
+	sortIndex(node);
+	// TODO bucket id 32がnode上にない(parentにある)ため、hello32が上書きされてしまう
+	bucket_id bucket;
+	FOREACH_BUCKET(node, bucket) {
+		if (bucket > id) {
+			memcpy(buckets + (i+1), buckets + i, sizeof(bucket_id) * (BINTREE_BUCKET_MAXSIZE - i));
+			buckets[i] = id;
+			memcpy(node->child + (i+1), node->child + i, sizeof(TNF_Node*) * (BINTREE_BUCKET_MAXSIZE - i));
+			memset(node->child + i, '\0', sizeof(TNF_Node*));
+			return i;
+		}
+	}
 	for (i = 0; i < BINTREE_BUCKET_OVERSIZE; i++) {
 		if (buckets[i] > id) {
 			memcpy(buckets + (i+1), buckets + i, sizeof(bucket_id) * (BINTREE_BUCKET_MAXSIZE - i));
 			buckets[i] = id;
 			memcpy(node->child + (i+1), node->child + i, sizeof(TNF_Node*) * (BINTREE_BUCKET_MAXSIZE - i));
 			memset(node->child + i, '\0', sizeof(TNF_Node*));
-			node->size++;
+			node->lsize++;
 			node->bsize++;
 			return i;
 		}
@@ -141,7 +152,7 @@ static TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
 	bucket_id center_key = buckets[BINTREE_CENTERING_KEY - 1];
 	printBucket(buckets);
 
-	if (parent->size >= BINTREE_BUCKET_OVERSIZE) {
+	if (parent->lsize >= BINTREE_BUCKET_OVERSIZE) {
 		fprintf(stderr, "split parent!!\n");
 		asm("int3");
 		splitNode(node->parent, center_key);
@@ -149,17 +160,23 @@ static TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
 	TNF_Node** nodes = insertParentBucket(parent, center_key, true);
 	TNF_Node* fwdNode = nodes[0];
 	TNF_Node* bwdNode = nodes[1];
+	fprintf(stderr, "node->bsize: %lu, size: %lu\n", node->bsize, node->lsize);
 
 	memcpy(fwdNode->bucket, buckets, sizeof(bucket_id) * (BINTREE_CENTERING_KEY - 1));
-	memcpy(bwdNode->bucket, buckets + BINTREE_CENTERING_KEY, sizeof(bucket_id) * BINTREE_CENTERING_KEY - 1);
+	memcpy(bwdNode->bucket, buckets + BINTREE_CENTERING_KEY, sizeof(bucket_id) * (BINTREE_CENTERING_KEY - 1));
 
 	memcpy(fwdNode->leaf, node->leaf, sizeof(TNF_LeafNode*) * BINTREE_CENTERING_KEY);
-	memcpy(bwdNode->leaf, node->leaf + BINTREE_CENTERING_KEY, sizeof(TNF_LeafNode*) * (BINTREE_CENTERING_KEY - 1));
+	memcpy(bwdNode->leaf, node->leaf + BINTREE_CENTERING_KEY, sizeof(TNF_LeafNode*) * (node->lsize - (BINTREE_CENTERING_KEY)));
 
-	fwdNode->size = BINTREE_CENTERING_KEY;
-	bwdNode->size = BINTREE_CENTERING_KEY - 1;
+	// TODO bwdNodeの一番最後のleafのデータがうまくコピーできてない
+	// bucket: 5, leaf: 6とbucket: 5, leaf: 5の場合の対応付けがだめ?
+	//fprintf(stderr, "node->data[%lu]: %s\n", node->lsize-2, (char*)leaf(node, node->lsize-2)->data);
+	//fprintf(stderr, "node->data[%lu]: %s\n", node->lsize-1, (char*)leaf(node, node->lsize-1)->data);
+	fwdNode->lsize = BINTREE_CENTERING_KEY;
+	bwdNode->lsize = node->lsize - (BINTREE_CENTERING_KEY);
 	fwdNode->bsize = BINTREE_CENTERING_KEY - 1;
 	bwdNode->bsize = BINTREE_CENTERING_KEY - 1;
+	//fprintf(stderr, "bwd->data[%lu]: %s\n", bwdNode->lsize-1, (char*)leaf(bwdNode, bwdNode->lsize-1)->data);
 	TNF_free(node);
 	return parent;
 }
@@ -199,28 +216,28 @@ void* Tree_get(TNF_Node* node, bucket_id id) {
 TNF_NodeResult* Tree_search(TNF_Node* node, void* threshold, int (*compare)(void* l, void* r)) {
 	size_t i;
 	TNF_NodeResult* ret = (TNF_NodeResult*)TNF_malloc(sizeof(TNF_NodeResult));
-	ret->size = 0;
+	ret->lsize = 0;
 	ret->data = (void*)TNF_malloc(SIZEOF_VOIDPTR * 32);
 	if (isNode(node)) {
-		for (i = 0; i < node->size; i++) {
+		for (i = 0; i < node->lsize; i++) {
 			if (compare((void*)(&node->bucket[i]), threshold)) {
 				Tree_search(child(node, i), threshold, compare);
 			}
 		}
 	}
 	else if (isLeaf(node)) {
-		for (i = 0; i < node->size; i++) {
+		for (i = 0; i < node->lsize; i++) {
 			if (child(node, i) == NULL) continue;
 			//TNF_LeafNode* leaf = leaf(node, i);
 			//if (compare((void*)(&leaf->base), threshold)) {
 			//	todo("expand TNF_NodeResult");
-			//	//if (ret->size == ret->maxsize) {
+			//	//if (ret->lsize == ret->maxsize) {
 			//	//	expand(ret);
 			//	//}
 			//	for (j = 0; j < leaf->cursor; j++) {
 			//		if (compare((void*)(&leaf->bucket[j]), threshold)) {
-			//			memcpy(ret->data + (SIZEOF_VOIDPTR * ret->size), leafdata(leaf, j), SIZEOF_VOIDPTR);
-			//			ret->size++;
+			//			memcpy(ret->data + (SIZEOF_VOIDPTR * ret->lsize), leafdata(leaf, j), SIZEOF_VOIDPTR);
+			//			ret->lsize++;
 			//		}
 			//	}
 			//}
@@ -260,7 +277,7 @@ void Tree_print(TNF_Node* node, void (*printLeaf)(TNF_LeafNode*)) {
 	size_t bi /* bucket_idx */, li = 1 /* leaf_idx */;
 	indent++;
 	print(node->child[0], indent+1, printLeaf);
-	for (bi = 0; bi < node->size; bi++, li++) {
+	for (bi = 0; bi < node->lsize; bi++, li++) {
 		if (bi < node->bsize) {
 			INDENT_TO(indent);
 			fprintf(stderr, "[%lu]: \n", node->bucket[bi]);
@@ -285,27 +302,47 @@ void printTest(TNF_LeafNode* leaf) {
 	fprintf(stderr, "%s\n", str);
 }
 
-#include <time.h>
+TNF_Node* Add_mocData(TNF_Node* root, size_t data) {
+	char* addr = (char*)malloc(sizeof(char) * 16);
+	sprintf(addr, "hello%lu", data);
+	root = Tree_add(root, data, (void*)addr);
+	Tree_print(root, printTest);
+	return root;
+}
+
 int main(int argc, char const* argv[])
 {
 	TNF_Node* root = Tree_create();
 	//Tree_start("dbname", "tblname"); // always working at another process
-	size_t i;
-	char* addr;
 	size_t data;
-	srand(time(NULL));
-	for (i = 0; i < 10; i++) {
-		data = rand() % 100;
-		addr = (char*)malloc(sizeof(char) * 16);
-		sprintf(addr, "hello%lu[%lu]", data, i);
-		root = Tree_add(root, data, (void*)addr);
-		Tree_print(root, printTest);
-	}
+	data = 20;
+	root = Add_mocData(root, data);
+	data = 7;
+	root = Add_mocData(root, data);
+	data = 32;
+	root = Add_mocData(root, data);
+	data = 78;
+	root = Add_mocData(root, data);
+	data = 52;
+	root = Add_mocData(root, data);
+	data = 15;
+	root = Add_mocData(root, data);
+	data = 99;
+	root = Add_mocData(root, data);
+	data = 64;
+	root = Add_mocData(root, data);
+	data = 21;
+	root = Add_mocData(root, data);
+	data = 23;
+	root = Add_mocData(root, data);
+	//data = 45;
+	//root = Add_mocData(root, data);
+
 	//asm("int3");
 	////size_t addr = Tree_get(root, bucket_id);
 	//int th = 10;
 	//TNF_NodeResult* list = Tree_search(root, (void*)&th, int_cmp);
-	//for (i = 0; i < list->size; i++) {
+	//for (i = 0; i < list->lsize; i++) {
 	//	char** str = (char**)(list->data + (i * SIZEOF_VOIDPTR));
 	//	fprintf(stderr, "ret: %s\n", *str);
 	//}

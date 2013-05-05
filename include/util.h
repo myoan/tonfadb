@@ -12,21 +12,23 @@
 #ifndef TNF_UTIL_H_
 #define TNF_UTIL_H_
 
-#ifdef DEBUG
+#ifdef TNF_DEBUG
 
-#define debug(fmt, ...) reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
-#define fixme(fmt, ...) reportFIXME(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
-#define todo(fmt, ...)  reportTODO(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
-#define err(fmt, ...)   reportERR(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define DBG_debug(fmt, ...) reportDBG(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define DBG_fixme(fmt, ...) reportFIXME(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define DBG_todo(fmt, ...)  reportTODO(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define DBG_err(fmt, ...)   reportERR(__FILE__, __FUNCTION__, __LINE__, fmt, ## __VA_ARGS__)
+#define DBG_assert(stmt) assert(stmt)
 
 #else
 
-#define debug(fmt, ...)
-#define fixme(fmt, ...)
-#define todo(fmt, ...)
-#define err(fmt, ...)
+#define DBG_debug(fmt, ...)
+#define DBG_fixme(fmt, ...)
+#define DBG_todo(fmt, ...)
+#define DBG_err(fmt, ...)
+#define DBG_assert(stmt)
 
-#endif /* DEBUG */
+#endif /* TNF_DEBUG */
 
 #define TNF_malloc(s) _TNF_malloc(s)
 #define TNF_free(p)   _TNF_free(p)
