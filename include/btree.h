@@ -53,6 +53,9 @@ typedef size_t bucket_id;
 
 #define Bidx(idx)  (2 * (idx) + 1)
 #define Lidx(idx)  (2 * (idx))
+#define Bsize(node)  (node->bsize)
+#define Lsize(node)  (node->lsize)
+#define Nsize(node)  (node->bsize + node->lsize)
 #define B(node, idx)  node->data[Bidx(idx)]
 #define L(node, idx)  node->data[Lidx(idx)]
 #define leafdata(leaf, idx) (leaf->data + (Lidx(idx) * SIZEOF_VOIDPTR_BYTE))
@@ -73,25 +76,27 @@ typedef size_t bucket_id;
 
 #define FOREACH_BUCKET(node, bucket) \
 		size_t _bi; \
-		for (_bi = 0; _bi < node->bsize, bucket = B(node, _bi); _bi++)\
+		for (_bi = 0; _bi < Bsize(node), bucket = B(node, _bi); _bi++)\
 
 #define FOREACH_NODE(node, ch) \
 		size_t _ni; \
-		for (_ni = 0; _ni < node->lsize, ch = (TNF_Node*)L(node, _ni); _ni++) \
+		for (_ni = 0; _ni < Lsize(node), ch = (TNF_Node*)L(node, _ni); _ni++) \
 
 #define FOREACH_LEAF(node, leaf) \
 		size_t _li; \
-		for (_li = 0; _li < node->lsize, node = (TNF_LeafNode*)L(node, _li); _li++) \
+		for (_li = 0; _li < Lsize(node), node = (TNF_LeafNode*)L(node, _li); _li++) \
 
-#define LSHIFT_BUCKET(node, n) { \
-		memcpy(node->data + n, node->data, SIZEOF_VOIDPTR * n); \
+#define LSHIFT_BUCKET(node, idx, n) { \
+		size_t _len = Nsize(node) - idx; \
+		memcpy(node->data + Bidx(idx) - (2 * n), node->data + Bidx(idx), SIZEOF_VOIDPTR * _len); \
+		memset(node->data + Bidx(idx), '\0', SIZEOF_VOIDPTR * 2 * n); \
 	}
 
-typedef struct MultiArray {
-	size_t bsize;
-	size_t lsize;
-	void* data[NODE_LENGTH];
-} MultiArray;
+#define RSHIFT_BUCKET(node, idx, n) { \
+		size_t _len = Nsize(node) - idx; \
+		memcpy(node->data + Bidx(idx) + (2 * n), node->data + Bidx(idx), SIZEOF_VOIDPTR * _len); \
+		memset(node->data + Bidx(idx), '\0', SIZEOF_VOIDPTR * 2 * n); \
+	}
 
 // TODO: padding
 struct _TNF_Node {

@@ -8,10 +8,9 @@ static TNF_Node* createRoot() {
 	node->bsize = 0;
 	node->parent = NULL;
 	node->isOverLeaf = false;
-	node->child = (void*)TNF_malloc(sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
-	fprintf(stderr, "leaf size: %lu\n", sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
-	memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
-	memset(node->child, '\0', sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
+	memset(node->data, '\0', SIZEOF_VOIDPTR * NODE_LENGTH);
+	//memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
+	//memset(node->child, '\0', sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
 	return node;
 }
 
@@ -22,17 +21,13 @@ static TNF_Node* createBranch(TNF_Node* parent) {
 	node->bsize = 0;
 	node->parent = parent;
 	node->isOverLeaf = false;
-	node->child = (void*)TNF_malloc(sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
-	fprintf(stderr, "leaf size: %lu\n", sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
-	memset(node->bucket, -1, sizeof(bucket_id) * BINTREE_BUCKET_OVERSIZE);
-	memset(node->child, '\0', sizeof(TNF_Node*) * BINTREE_BUCKET_OVERSIZE);
+	memset(node->data, '\0', SIZEOF_VOIDPTR * NODE_LENGTH);
 	return node;
 }
 
 static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 	TNF_LeafNode* leaf = (TNF_LeafNode*)TNF_malloc(sizeof(TNF_LeafNode));
 	leaf->type = LEAF;
-	leaf->lsize = 0;
 	leaf->parent = node;
 	return leaf;
 }
@@ -65,7 +60,7 @@ static void sortIndex(TNF_Node* node) {
 				max_i = j;
 			}
 		}
-		SWAP(size_t, B(node, i-1), B(node, max_i));
+		SWAP(bucket_id, B(node, i-1), B(node, max_i));
 		max_i = 0;
 	}
 }
@@ -80,28 +75,16 @@ void printBucket(bucket_id* p) {
 }
 
 static int insertBucket(TNF_Node* node, bucket_id id) {
-	bucket_id* buckets = node->bucket;
 	int i = 0;
 	sortIndex(node);
-	// TODO bucket id 32がnode上にない(parentにある)ため、hello32が上書きされてしまう
 	bucket_id bucket;
 	FOREACH_BUCKET(node, bucket) {
 		if (bucket > id) {
-			memcpy(buckets + (i+1), buckets + i, sizeof(bucket_id) * (BINTREE_BUCKET_MAXSIZE - i));
-			buckets[i] = id;
-			memcpy(node->child + (i+1), node->child + i, sizeof(TNF_Node*) * (BINTREE_BUCKET_MAXSIZE - i));
-			memset(node->child + i, '\0', sizeof(TNF_Node*));
-			return i;
-		}
-	}
-	for (i = 0; i < BINTREE_BUCKET_OVERSIZE; i++) {
-		if (buckets[i] > id) {
-			memcpy(buckets + (i+1), buckets + i, sizeof(bucket_id) * (BINTREE_BUCKET_MAXSIZE - i));
-			buckets[i] = id;
-			memcpy(node->child + (i+1), node->child + i, sizeof(TNF_Node*) * (BINTREE_BUCKET_MAXSIZE - i));
-			memset(node->child + i, '\0', sizeof(TNF_Node*));
-			node->lsize++;
-			node->bsize++;
+			size_t len = Nsize(node) - _bi;
+			memcpy(node->data + Bidx(_bi+1), node->data + Bidx(_bi), SIZEOF_VOIDPTR * len);
+			setB(node, i, id);
+			memcpy(node->data + Bidx(_bi+1), node->data + Bidx(_bi), SIZEOF_VOIDPTR * len);
+			memset(node->data + Bidx(_bi), '\0', SIZEOF_VOIDPTR);
 			return i;
 		}
 	}
@@ -109,15 +92,15 @@ static int insertBucket(TNF_Node* node, bucket_id id) {
 }
 
 static int getBucket(TNF_Node* node, bucket_id id) {
-	bucket_id* buckets = node->bucket;
 	int i = 0;
-	sortIndex(buckets);
-	for (i = 0; i < BINTREE_BUCKET_OVERSIZE; i++) {
-		if (buckets[i] > id) {
-			return i;
+	sortIndex(node);
+	bucket_id bucket;
+	FOREACH_BUCKET(node, bucket) {
+		if (bucket > id) {
+			return _bi;
 		}
 	}
-	return i;
+	return _bi;
 }
 
 static TNF_Node* getRoot(TNF_Node* node) {
@@ -127,6 +110,7 @@ static TNF_Node* getRoot(TNF_Node* node) {
 	return node;
 }
 
+/*
 static TNF_Node** insertParentBucket(TNF_Node* node, bucket_id id, bool isOverLeaf) {
 	int idx = insertBucket(node, id);
 	TNF_Node* ch_node;
@@ -180,26 +164,27 @@ static TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
 	TNF_free(node);
 	return parent;
 }
+*/
 
 TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data) {
 	TNF_Node* ret;
 	int idx;
 	if (isOverLeaf(node)) {
 		idx = insertBucket(node, id);
-		TNF_Node* ch_node = child(node, idx);
+		TNF_Node* ch_node = L(node, idx);
 		if (ch_node == NULL) {
 			ch_node = (TNF_Node*)createLeaf(node, id);
 		}
 		TNF_LeafNode* leaf = (TNF_LeafNode*)ch_node;
 		leaf->data = data;
-		node->leaf[idx] = leaf;
-		if (node->bsize >= BINTREE_BUCKET_OVERSIZE) {
-			node = splitNode(node, id);
-		}
+		setL(node, idx, leaf);
+		//if (node->bsize >= BINTREE_BUCKET_OVERSIZE) {
+		//	node = splitNode(node, id);
+		//}
 	}
 	else {
 		idx = getBucket(node, id);
-		Tree_add(node->child[idx], id, data);
+		Tree_add((TNF_Node*)L(node, idx), id, data);
 	}
 	ret = getRoot(node);
 	return ret;
@@ -214,6 +199,7 @@ void* Tree_get(TNF_Node* node, bucket_id id) {
 
 
 TNF_NodeResult* Tree_search(TNF_Node* node, void* threshold, int (*compare)(void* l, void* r)) {
+/*
 	size_t i;
 	TNF_NodeResult* ret = (TNF_NodeResult*)TNF_malloc(sizeof(TNF_NodeResult));
 	ret->lsize = 0;
@@ -244,6 +230,8 @@ TNF_NodeResult* Tree_search(TNF_Node* node, void* threshold, int (*compare)(void
 		}
 	}
 	return ret;
+*/
+	return NULL;
 }
 
 /* ----------------------------------------------------------------------------- */
@@ -257,36 +245,49 @@ void Tree_exit(TNF_Node* node) {
 
 /* ----------------------------------------------------------------------------- */
 
-void print(TNF_Node* node, int indent, void (*printLeaf)(TNF_LeafNode*)) {
-	if (node == NULL) {
-		return;
-	}
-	if (isNode(node)) {
-		Tree_print(node, printLeaf);
-	}
-	else if (isLeaf(node)) {
-		TNF_LeafNode* leaf = (TNF_LeafNode*)node;
-		INDENT_TO(indent);
-		printLeaf(leaf);
-	}
-}
+//void print(TNF_Node* node, int indent, void (*printLeaf)(TNF_LeafNode*)) {
+//	if (node == NULL) {
+//		return;
+//	}
+//	if (isNode(node)) {
+//		Tree_print(node, printLeaf);
+//	}
+//	else if (isLeaf(node)) {
+//		TNF_LeafNode* leaf = (TNF_LeafNode*)node;
+//		INDENT_TO(indent);
+//		printLeaf(leaf);
+//	}
+//}
+//
+//void Tree_print(TNF_Node* node, void (*printLeaf)(TNF_LeafNode*)) {
+//
+//	static int indent = 0;
+//	size_t bi /* bucket_idx */, li = 1 /* leaf_idx */;
+//	indent++;
+//	print(node->child[0], indent+1, printLeaf);
+//	for (bi = 0; bi < node->lsize; bi++, li++) {
+//		if (bi < node->bsize) {
+//			INDENT_TO(indent);
+//			fprintf(stderr, "[%lu]: \n", node->bucket[bi]);
+//		}
+//		print(node->child[li], indent+1, printLeaf);
+//	}
+//	indent--;
+//}
 
 void Tree_print(TNF_Node* node, void (*printLeaf)(TNF_LeafNode*)) {
-
-	static int indent = 0;
-	size_t bi /* bucket_idx */, li = 1 /* leaf_idx */;
-	indent++;
-	print(node->child[0], indent+1, printLeaf);
-	for (bi = 0; bi < node->lsize; bi++, li++) {
-		if (bi < node->bsize) {
-			INDENT_TO(indent);
-			fprintf(stderr, "[%lu]: \n", node->bucket[bi]);
+	size_t len = node->bsize + node->lsize;
+	int i;
+	for (i = 0; i < len; i++) {
+		if (node->data[i] == NULL) return;
+		if (i % 2 == 0) {
+			printLeaf((TNF_LeafNode*)node->data[i]);
 		}
-		print(node->child[li], indent+1, printLeaf);
+		else {
+			fprintf(stderr, "[%lu]: \n", (size_t)node->data[i]);
+		}
 	}
-	indent--;
 }
-
 /* ============================================================================= */
 
 int int_cmp(void* l, void* r) {
@@ -321,20 +322,20 @@ int main(int argc, char const* argv[])
 	root = Add_mocData(root, data);
 	data = 32;
 	root = Add_mocData(root, data);
-	data = 78;
-	root = Add_mocData(root, data);
-	data = 52;
-	root = Add_mocData(root, data);
-	data = 15;
-	root = Add_mocData(root, data);
-	data = 99;
-	root = Add_mocData(root, data);
-	data = 64;
-	root = Add_mocData(root, data);
-	data = 21;
-	root = Add_mocData(root, data);
-	data = 23;
-	root = Add_mocData(root, data);
+	//data = 78;
+	//root = Add_mocData(root, data);
+	//data = 52;
+	//root = Add_mocData(root, data);
+	//data = 15;
+	//root = Add_mocData(root, data);
+	//data = 99;
+	//root = Add_mocData(root, data);
+	//data = 64;
+	//root = Add_mocData(root, data);
+	//data = 21;
+	//root = Add_mocData(root, data);
+	//data = 23;
+	//root = Add_mocData(root, data);
 	//data = 45;
 	//root = Add_mocData(root, data);
 
