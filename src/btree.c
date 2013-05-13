@@ -1,7 +1,7 @@
 #include <btree.h>
 
 /* ----------------------------------------------------------------------------- */
-static TNF_Node* createRoot() {
+TNF_Node* createRoot() {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = ROOT;
 	node->lsize = 0;
@@ -33,7 +33,7 @@ static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 }
 
 TNF_Node* Tree_create() {
-	TNF_Node* ret = createBranch(NULL);
+	TNF_Node* ret = createRoot();
 	ret->isOverLeaf = true;
 	return ret;
 }
@@ -171,6 +171,7 @@ TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data) {
 	int idx;
 	if (isOverLeaf(node)) {
 		idx = insertBucket(node, id);
+		fprintf(stderr, "id: %lu\n", id);
 		TNF_Node* ch_node = L(node, idx);
 		if (ch_node == NULL) {
 			ch_node = (TNF_Node*)createLeaf(node, id);
@@ -311,6 +312,7 @@ TNF_Node* Add_mocData(TNF_Node* root, size_t data) {
 	return root;
 }
 
+/*
 int main(int argc, char const* argv[])
 {
 	TNF_Node* root = Tree_create();
@@ -351,3 +353,4 @@ int main(int argc, char const* argv[])
 	Tree_exit(root);
 	return 0;
 }
+*/

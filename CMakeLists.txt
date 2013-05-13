@@ -27,13 +27,26 @@ set(SRC_DIR
 	src/readline.c
 	src/tonfa.c
 	src/util.c
+	test/btree/main.cc
 )
 
+set(TONFA_HOMEDIR ${CMAKE_CURRENT_SOURCE_DIR})
+message(${TONFA_HOMEDIR})
+#add_subdirectory(test/btree)
+
 set(INCLUDE_DIR
-	${CMAKE_CURRENT_SOURCE_DIR}/include
+	${TONFA_HOMEDIR}/include
 )
 
 include_directories(${INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${PROJECT_NAME} ${SRC_DIR})
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+set(ExtraLibs)
+find_library(HAVE_GTEST NAMES gtest)
+
+if(HAVE_GTEST)
+	set(ExtraLibs ${ExtraLibs} ${HAVE_GTEST})
+	target_link_libraries(${PROJECT_NAME} ${ExtraLibs})
+endif(HAVE_GTEST)

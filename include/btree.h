@@ -124,14 +124,14 @@ struct _TNF_NodeResult {
 /* ----------------------------------------------------------------------------- */
 /* prototype */
 
-void Tree_print(TNF_Node* node, void(*printLeaf)(TNF_LeafNode*));
-TNF_Node* Tree_create();
-void Tree_start(char* dbname, char* tblname);
-TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data);
-void* Tree_get(TNF_Node* node, bucket_id id);
-TNF_NodeResult* Tree_search(TNF_Node* node, void* threshold, int (*compare)(void* l, void* r));
-void Tree_save(TNF_Node* node);
-void Tree_exit(TNF_Node* node);
+extern void Tree_print(TNF_Node* node, void(*printLeaf)(TNF_LeafNode*));
+extern TNF_Node* Tree_create();
+extern void Tree_start(char* dbname, char* tblname);
+extern TNF_Node* Tree_add(TNF_Node* node, bucket_id id, void* data);
+extern void* Tree_get(TNF_Node* node, bucket_id id);
+extern TNF_NodeResult* Tree_search(TNF_Node* node, void* threshold, int (*compare)(void* l, void* r));
+extern void Tree_save(TNF_Node* node);
+extern void Tree_exit(TNF_Node* node);
 
 #ifdef __cplusplus
 }
