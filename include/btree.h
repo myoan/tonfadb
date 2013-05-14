@@ -28,11 +28,14 @@ typedef size_t bucket_id;
 
 #define isLeaf(node) (node->type & LEAF)
 #define isOverLeaf(node) node->isOverLeaf
+#define isLB(node) (node->type & LEAF_BRANCH)
+#define isRoot(node)   (node->type & ROOT)
 #define isNode(node)   (node->type & (BRANCH | ROOT))
 
 #define _BYTE 8
 #define SIZEOF_VOIDPTR (sizeof(void*))
 #define SIZEOF_VOIDPTR_BYTE (SIZEOF_VOIDPTR * _BYTE)
+#define byte(size) (size * SIZEOF_VOIDPTR)
 
 #define BINTREE_BUCKET_MAXSIZE 4
 #define BINTREE_LEAF_DATASIZE 4
@@ -40,15 +43,16 @@ typedef size_t bucket_id;
 #define BINTREE_CENTERING_KEY (BINTREE_BUCKET_MAXSIZE / 2 + 1)
 #define DATA_CENTERING_KEY_BYTE (BINTREE_CENTERING_KEY * sizeof(void*))
 #define BUCKET_CENTERING_KEY_BYTE (BINTREE_CENTERING_KEY * sizeof(bucket_id))
+#define CenterBucket(node) (bucket_id)node->data[Bidx(BINTREE_CENTERING_KEY)]
 
 #define ROOT        1  // 00001
 #define BRANCH      2  // 00010
 #define LEAF        4  // 00100
-#define BRANCH_LEAF 8  // 01000
+#define LEAF_BRANCH 8  // 01000
 #define NODE_TYPE   15 // 11111
 
 #define BUCKET_LENGTH 5
-#define LEAF_LENGTH   5
+#define LEAF_LENGTH   (BUCKET_LENGTH + 1)
 #define NODE_LENGTH   (BUCKET_LENGTH + LEAF_LENGTH)
 
 #define Bidx(idx)  (2 * (idx) + 1)
@@ -76,7 +80,7 @@ typedef size_t bucket_id;
 
 #define FOREACH_BUCKET(node, bucket) \
 		size_t _bi; \
-		for (_bi = 0; _bi < Bsize(node), bucket = B(node, _bi); _bi++)\
+		for (_bi = 0; _bi < Bsize(node), bucket = (size_t)B(node, _bi); _bi++)\
 
 #define FOREACH_NODE(node, ch) \
 		size_t _ni; \
@@ -103,7 +107,7 @@ struct _TNF_Node {
 	size_t type;
 	size_t bsize;
 	size_t lsize;
-	bool isOverLeaf;
+	//bool isOverLeaf;
 	TNF_Node* parent;
 	void* data[NODE_LENGTH];
 } _TNF_Node;
@@ -111,6 +115,7 @@ struct _TNF_Node {
 struct _TNF_LeafNode {
 	size_t type;
 	TNF_Node* parent;
+	bucket_id id;
 	void* data;
 } _TNF_LeafNode;
 
@@ -137,9 +142,10 @@ extern TNF_Node* createRoot();
 extern TNF_Node* createBranch(TNF_Node* parent);
 extern TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id);
 extern void printBucket(bucket_id* p);
-extern int insertBucket(TNF_Node* node, bucket_id id);
+extern void InsertBucket(TNF_Node* node, bucket_id id, size_t idx);
 extern int getBucket(TNF_Node* node, bucket_id id);
 extern TNF_Node* getRoot(TNF_Node* node);
+extern void node_datacpy(TNF_Node* to_node, size_t to_idx, TNF_Node* from_node, size_t from_idx, size_t size);
 
 #ifdef __cplusplus
 }
