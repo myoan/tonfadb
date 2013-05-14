@@ -133,6 +133,14 @@ extern TNF_NodeResult* Tree_search(TNF_Node* node, void* threshold, int (*compar
 extern void Tree_save(TNF_Node* node);
 extern void Tree_exit(TNF_Node* node);
 
+extern TNF_Node* createRoot();
+extern TNF_Node* createBranch(TNF_Node* parent);
+extern TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id);
+extern void printBucket(bucket_id* p);
+extern int insertBucket(TNF_Node* node, bucket_id id);
+extern int getBucket(TNF_Node* node, bucket_id id);
+extern TNF_Node* getRoot(TNF_Node* node);
+
 #ifdef __cplusplus
 }
 #endif

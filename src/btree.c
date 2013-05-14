@@ -14,18 +14,17 @@ TNF_Node* createRoot() {
 	return node;
 }
 
-static TNF_Node* createBranch(TNF_Node* parent) {
+TNF_Node* createBranch(TNF_Node* parent) {
 	TNF_Node* node = (TNF_Node*)TNF_malloc(sizeof(TNF_Node));
 	node->type = BRANCH;
 	node->lsize = 0;
 	node->bsize = 0;
 	node->parent = parent;
-	node->isOverLeaf = false;
 	memset(node->data, '\0', SIZEOF_VOIDPTR * NODE_LENGTH);
 	return node;
 }
 
-static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
+TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 	TNF_LeafNode* leaf = (TNF_LeafNode*)TNF_malloc(sizeof(TNF_LeafNode));
 	leaf->type = LEAF;
 	leaf->parent = node;
@@ -34,7 +33,7 @@ static TNF_LeafNode* createLeaf(TNF_Node* node, bucket_id id) {
 
 TNF_Node* Tree_create() {
 	TNF_Node* ret = createRoot();
-	ret->isOverLeaf = true;
+	//ret->isOverLeaf = true;
 	return ret;
 }
 
@@ -50,7 +49,7 @@ void Tree_start(char* dbname, char* tblname) {
 		b = _tmp;		\
 	}
 
-static void sortIndex(TNF_Node* node) {
+void sortIndex(TNF_Node* node) {
 	//bubble sort
 	//[TODO] implement better sort algorithm.
 	size_t i, j, max_i = 0;
@@ -74,7 +73,7 @@ void printBucket(bucket_id* p) {
 	fprintf(stderr, "]\n");
 }
 
-static int insertBucket(TNF_Node* node, bucket_id id) {
+int insertBucket(TNF_Node* node, bucket_id id) {
 	int i = 0;
 	sortIndex(node);
 	bucket_id bucket;
@@ -91,7 +90,7 @@ static int insertBucket(TNF_Node* node, bucket_id id) {
 	return i;
 }
 
-static int getBucket(TNF_Node* node, bucket_id id) {
+int getBucket(TNF_Node* node, bucket_id id) {
 	int i = 0;
 	sortIndex(node);
 	bucket_id bucket;
@@ -103,7 +102,7 @@ static int getBucket(TNF_Node* node, bucket_id id) {
 	return _bi;
 }
 
-static TNF_Node* getRoot(TNF_Node* node) {
+TNF_Node* getRoot(TNF_Node* node) {
 	if (node->parent != NULL) {
 		return getRoot(node->parent);
 	}
@@ -111,7 +110,7 @@ static TNF_Node* getRoot(TNF_Node* node) {
 }
 
 /*
-static TNF_Node** insertParentBucket(TNF_Node* node, bucket_id id, bool isOverLeaf) {
+TNF_Node** insertParentBucket(TNF_Node* node, bucket_id id, bool isOverLeaf) {
 	int idx = insertBucket(node, id);
 	TNF_Node* ch_node;
 	int i = 0;
@@ -123,7 +122,7 @@ static TNF_Node** insertParentBucket(TNF_Node* node, bucket_id id, bool isOverLe
 	return node->child + idx;
 }
 
-static TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
+TNF_Node* splitNode(TNF_Node* node, bucket_id id) {
 	todo("expand blanced-tree node");
 	TNF_Node* parent = node->parent;
 	if (parent == NULL) { // node is root
