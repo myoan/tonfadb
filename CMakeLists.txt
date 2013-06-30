@@ -20,13 +20,8 @@ SET(CMAKE_C_FLAGS_DEBUG        "${CMAKE_CXX_FLAGS} -O0 -g3")
 SET(CMAKE_C_FLAGS_COMPRESSED   "${CMAKE_CXX_FLAGS} -Os -g0")
 
 set(SRC_DIR
-	#src/bptree.c
-	src/btree.c
-	src/file.c
-	src/parse.c
-	src/readline.c
-	src/tonfa.c
-	src/util.c
+	src/btree.cpp
+	test/isam/AlternateArrayTest.cpp
 )
 
 set(INCLUDE_DIR
@@ -37,3 +32,11 @@ include_directories(${INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${PROJECT_NAME} ${SRC_DIR})
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+set(ExtraLibs)
+find_library(HAVE_CPPUTEST NAMES CppUTest)
+
+if(HAVE_CPPUTEST)
+	set(ExtraLibs ${ExtraLibs} ${HAVE_CPPUTEST})
+	target_link_libraries(${PROJECT_NAME} ${ExtraLibs})
+endif(HAVE_CPPUTEST)
